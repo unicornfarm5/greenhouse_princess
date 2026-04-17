@@ -1,0 +1,16 @@
+node_modules/
+/node_modules
+dist/
+coverage/
+*.log
+
+# Environment
+.env
+.env.*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Local SQLite database
+greenhouse.sqlite

@@ -1,0 +1,266 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+:root {
+  --bg-top: #73d253;
+  --bg-bottom: #f672f2;
+  --panel: #fffee8;
+  --panel-border: #213547;
+  --text-main: #2b1f12;
+  --text-subtle: #6b4e2f;
+  --accent: #2f9e44;
+  --accent-2: #245f33;
+  --error: #a51414;
+  --shadow: rgba(27, 16, 6, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--text-main);
+  font-family: "Press Start 2P", monospace;
+  image-rendering: pixelated;
+  background:
+    radial-gradient(circle at 80% 15%, rgba(204, 242, 160, 0.55), transparent 28%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+  min-height: 100vh;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.hero-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.hero {
+  flex: 1;
+  border: 4px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: 8px 8px 0 var(--shadow);
+  padding: 1.5rem;
+}
+
+.add-plant-button {
+  border: 4px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text-main);
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.66rem;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.add-plant-button:hover {
+  transform: translate(-2px, -2px);
+}
+
+.add-plant-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.add-plant-modal {
+  width: min(540px, 100%);
+  border: 4px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: 10px 10px 0 var(--shadow);
+  padding: 1rem;
+}
+
+.add-plant-modal h2 {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+}
+
+.add-plant-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.add-plant-form label {
+  font-size: 0.55rem;
+}
+
+.add-plant-form input {
+  width: 100%;
+  border: 3px solid var(--panel-border);
+  background: #fff;
+  color: var(--text-main);
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.6rem;
+  padding: 0.55rem;
+}
+
+.add-plant-form__actions {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.7rem;
+}
+
+.add-plant-form__actions button {
+  border: 3px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text-main);
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.58rem;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+}
+
+.hero__kicker {
+  margin: 0 0 1rem;
+  color: var(--accent-2);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(1.15rem, 3vw, 1.7rem);
+}
+
+.hero__description {
+  margin: 1rem 0 0;
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  line-height: 1.9;
+}
+
+.state-message {
+  margin: 1.5rem 0 0;
+  border: 3px solid var(--panel-border);
+  background: #fff3d9;
+  padding: 0.8rem 1rem;
+  font-size: 0.66rem;
+}
+
+.state-message--error {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.plant-grid {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.plant-card {
+  background: var(--panel);
+  border: 4px solid var(--panel-border);
+  box-shadow: 6px 6px 0 var(--shadow);
+  padding: 1rem;
+  transition: transform 120ms ease;
+}
+
+.plant-card__image {
+  display: block;
+  width: min(180px, 100%);
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  border: none;
+  background: transparent;
+  margin: 0 auto 0.85rem;
+}
+
+.plant-card:hover {
+  transform: translate(-2px, -2px);
+}
+
+.plant-card__header {
+  margin-bottom: 0.8rem;
+}
+
+.plant-card__header h2 {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.plant-card__header h2 + .plant-kind {
+  margin-left: 0;
+}
+
+.plant-kind {
+  display: inline-block;
+  margin-top: 0.6rem;
+  background: var(--accent);
+  color: #f3ffe8;
+  border: 2px solid var(--accent-2);
+  padding: 0.3rem 0.45rem;
+  font-size: 0.56rem;
+  text-transform: uppercase;
+}
+
+.plant-stats {
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.plant-stats div {
+  display: grid;
+  gap: 0.35rem;
+  border: 2px dashed #c1f2cf;
+  padding: 0.4rem;
+  font-size: 0.56rem;
+}
+
+.plant-stats dt {
+  color: var(--accent-2);
+}
+
+.plant-stats dd {
+  line-height: 1.5;
+}
+
+.plant-stats dt,
+.plant-stats dd {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 1rem 0.8rem 2rem;
+  }
+
+  .hero-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero {
+    padding: 1rem;
+  }
+
+  .add-plant-button {
+    width: 100%;
+  }
+
+  .add-plant-form__actions {
+    flex-direction: column;
+  }
+
+  .add-plant-form__actions button {
+    width: 100%;
+  }
+
+  .hero__description {
+    line-height: 1.7;
+  }
+}
