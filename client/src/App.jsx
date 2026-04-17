@@ -1,6 +1,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
-import { createPlant, fetchPlants } from "./api.js";
+import { createPlant, fetchPlants, isTemporaryFlowersMode } from "./api.js";
+import { DEFAULT_PLANTS } from "./defaultPlants.js";
 import PlantCard from "./components/PlantCard.jsx";
 import AddPlantPage from "./components/AddPlantPage.jsx";
 
@@ -41,6 +42,8 @@ function validateClientTextField(value, maxLength, label) {
 }
 
 export default function App() {
+  const temporaryFlowersMode = isTemporaryFlowersMode();
+
   // Main list state and modal state live here so the page stays predictable.
   const [plants, setPlants] = useState([]);
   const [error, setError] = useState("");
@@ -109,9 +112,30 @@ export default function App() {
     setSubmitError("");
 
     try {
+      const normalizedPlant = {
+        name: newPlantInput.name.trim(),
+        sort: newPlantInput.sort.trim(),
+        shouldBeWatered: newPlantInput.shouldBeWatered.trim(),
+        mood: newPlantInput.mood.trim(),
+        imageFileName: newPlantInput.imageFileName.trim()
+      };
+
+      if (temporaryFlowersMode) {
+        const temporaryPlant = {
+          id: `temp-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+          ...normalizedPlant,
+          picture: pastedImageDataUrl
+        };
+
+        setPlants((prev) => [...prev, temporaryPlant]);
+        setIsAddPlantOpen(false);
+        resetAddPlantState();
+        return;
+      }
+
       // Send metadata + pasted image data URL to the API.
       const createdPlant = await createPlant({
-        ...newPlantInput,
+        ...normalizedPlant,
         imageDataUrl: pastedImageDataUrl
       });
 
@@ -141,6 +165,12 @@ export default function App() {
 
   // Load the initial plant list once when the app starts.
   useEffect(() => {
+    if (temporaryFlowersMode) {
+      setPlants(DEFAULT_PLANTS);
+      setError("");
+      return;
+    }
+
     async function loadPlants() {
       try {
         const nextPlants = await fetchPlants();
@@ -151,7 +181,7 @@ export default function App() {
     }
 
     void loadPlants();
-  }, []);
+  }, [temporaryFlowersMode]);
 
   return (
     <main className="page">
@@ -164,9 +194,12 @@ export default function App() {
           <p className="hero__description">These are your first plants ! Feel free to explore🌷</p>
         </section>
         <button className="add-plant-button" type="button" onClick={handleAddNewPlantClick}>
-          Add a new plant
+          {temporaryFlowersMode ? "Add a temporary plant" : "Add a new plant"}
         </button>
       </section>
+      {temporaryFlowersMode ? (
+        <p className="state-message">Demo mode: flowers are only saved in your current tab and disappear after refresh.</p>
+      ) : null}
       {error ? <p className="state-message state-message--error">{error}</p> : null}
 
       {/* Render the current collection of plants as cards. */}
@@ -189,6 +222,7 @@ export default function App() {
         submitError={submitError}
         isSubmitting={isSubmitting}
         fieldLimits={FIELD_LIMITS}
+        isTemporaryMode={temporaryFlowersMode}
       />
     </main>
   );

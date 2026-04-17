@@ -1,0 +1,34 @@
+export const DEFAULT_PLANTS = [
+  {
+    id: 1,
+    name: "Luna",
+    sort: "devil's ivy",
+    shouldBeWatered: "Every 2 days",
+    mood: "Thriving",
+    picture: "/plants/devilsivy.png"
+  },
+  {
+    id: 2,
+    name: "Mossy",
+    sort: "philodendron",
+    shouldBeWatered: "Every 4 days",
+    mood: "Happy",
+    picture: "/plants/philodendron.png"
+  },
+  {
+    id: 3,
+    name: "Rosie",
+    sort: "flamingo flower",
+    shouldBeWatered: "Every 2 days",
+    mood: "Blooming",
+    picture: "/plants/flamingoflower.png"
+  },
+  {
+    id: 4,
+    name: "Lilly",
+    sort: "English peacy lilly",
+    shouldBeWatered: "once a week",
+    mood: "Happy:)",
+    picture: "/plants/lilly.png"
+  }
+];
