@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: "client",
-  base: "/greenhouse_princess/"
-});
+  base: command === "build" ? "/greenhouse_princess/" : "/"
+}));
