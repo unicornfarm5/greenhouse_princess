@@ -11,7 +11,8 @@ export default function AddPlantPage({
   imageStatus,
   submitError,
   isSubmitting,
-  fieldLimits
+  fieldLimits,
+  isTemporaryMode
 }) {
   // Read an image directly from clipboard and convert it to a data URL for preview/upload.
   function handlePaste(event) {
@@ -53,6 +54,9 @@ export default function AddPlantPage({
     <section className="add-plant-modal-backdrop">
       <section className="add-plant-modal">
         <h2>Add a new plant</h2>
+        {isTemporaryMode ? (
+          <p className="paste-status">Demo mode: this flower only exists in your current tab and resets on refresh.</p>
+        ) : null}
         <form className="add-plant-form" onSubmit={onSubmit}>
           <label htmlFor="name">Name</label>
           <input id="name" name="name" value={newPlantInput.name} onChange={onInputChange} maxLength={fieldLimits.name} required />
@@ -96,7 +100,7 @@ export default function AddPlantPage({
 
           <section className="add-plant-form__actions">
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Create plant"}
+              {isSubmitting ? "Saving..." : isTemporaryMode ? "Create temporary plant" : "Create plant"}
             </button>
             <button type="button" onClick={onClose} disabled={isSubmitting}>
               Cancel
