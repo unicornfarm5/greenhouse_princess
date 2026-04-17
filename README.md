@@ -50,3 +50,25 @@ You can force behavior with Vite env vars:
 - `VITE_TEMP_FLOWERS_MODE=true` to always use temporary mode
 - `VITE_TEMP_FLOWERS_MODE=false` to always use backend-save mode
 - `VITE_API_BASE_URL=http://localhost:3001/api` (or another API URL) to change backend target
+
+## Deploy to GitHub Pages (auto) 🪴
+
+This repository is configured for auto deploy with GitHub Actions.
+
+### One-time setup in GitHub
+
+1. Open repository settings.
+2. Go to Pages.
+3. Under Build and deployment, choose Source: GitHub Actions.
+
+### Deploy flow
+
+1. Push to the `main` branch.
+2. GitHub Action in `.github/workflows/deploy-pages.yml` builds and deploys the frontend.
+3. Site URL: `https://unicornfarm5.github.io/greenhouse_princess/`
+
+### Notes
+
+- GitHub Pages only hosts the frontend.
+- Backend write API is not deployed there.
+- Deployed site therefore uses temporary flowers mode by default.
