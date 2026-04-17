@@ -1,9 +1,9 @@
-# greenhouse_princess
+# greenhouse_princess 🌷🌱🌹✨
 
-Minimal local React + Express plant app.
+Minimal local React + Express plant app🪩🪴
 
 
-## Getting started
+## Getting started 🪴
 
 1. Install dependencies:
 
@@ -21,7 +21,7 @@ npm run dev
 
 - `http://localhost:5173`
 
-## Where to view frontend and endpoints
+## Where to view frontend and endpoints 🪴
 
 After `npm run dev` is running:
 
@@ -29,7 +29,7 @@ After `npm run dev` is running:
 - All plants endpoint: `http://localhost:3001/api/all_plants`
 - Single plant endpoint (example): `http://localhost:3001/api/id/plant-1`
 
-## API
+## API 🪴
 
 - `GET /api/all_plants`: returns all plants
 - `GET /api/id/:id`: returns one plant by id
