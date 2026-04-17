@@ -198,7 +198,7 @@ export default function App() {
         </button>
       </section>
       {temporaryFlowersMode ? (
-        <p className="state-message">Demo mode: new flowers are only saved in your current tab and disappear after refresh.</p>
+        <p className="state-message">Demo mode: new flowers are only saved until refresh.</p>
       ) : null}
       {error ? <p className="state-message state-message--error">{error}</p> : null}
 
