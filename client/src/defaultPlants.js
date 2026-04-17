@@ -1,3 +1,7 @@
+function publicPlantImage(fileName) {
+  return `${import.meta.env.BASE_URL}plants/${fileName}`;
+}
+
 export const DEFAULT_PLANTS = [
   {
     id: 1,
@@ -5,7 +9,7 @@ export const DEFAULT_PLANTS = [
     sort: "devil's ivy",
     shouldBeWatered: "Every 2 days",
     mood: "Thriving",
-    picture: "/plants/devilsivy.png"
+    picture: publicPlantImage("devilsivy.png")
   },
   {
     id: 2,
@@ -13,7 +17,7 @@ export const DEFAULT_PLANTS = [
     sort: "philodendron",
     shouldBeWatered: "Every 4 days",
     mood: "Happy",
-    picture: "/plants/philodendron.png"
+    picture: publicPlantImage("philodendron.png")
   },
   {
     id: 3,
@@ -21,7 +25,7 @@ export const DEFAULT_PLANTS = [
     sort: "flamingo flower",
     shouldBeWatered: "Every 2 days",
     mood: "Blooming",
-    picture: "/plants/flamingoflower.png"
+    picture: publicPlantImage("flamingoflower.png")
   },
   {
     id: 4,
@@ -29,6 +33,6 @@ export const DEFAULT_PLANTS = [
     sort: "English peacy lilly",
     shouldBeWatered: "once a week",
     mood: "Happy:)",
-    picture: "/plants/lilly.png"
+    picture: publicPlantImage("lilly.png")
   }
 ];
