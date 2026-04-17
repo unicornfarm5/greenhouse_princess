@@ -12,7 +12,36 @@ const EMPTY_NEW_PLANT = {
   imageFileName: ""
 };
 
+// Keep the client aligned with the server so we catch invalid input early.
+const FIELD_LIMITS = {
+  name: 80,
+  sort: 80,
+  shouldBeWatered: 120,
+  mood: 40,
+  imageFileName: 120
+};
+
+// Small client-side guardrails for a cleaner form experience.
+function validateClientTextField(value, maxLength, label) {
+  if (typeof value !== "string") {
+    return `${label} must be text.`;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return `${label} is required.`;
+  }
+
+  if (trimmed.length > maxLength) {
+    return `${label} must be ${maxLength} characters or fewer.`;
+  }
+
+  return "";
+}
+
 export default function App() {
+  // Main list state and modal state live here so the page stays predictable.
   const [plants, setPlants] = useState([]);
   const [error, setError] = useState("");
   const [isAddPlantOpen, setIsAddPlantOpen] = useState(false);
@@ -36,21 +65,40 @@ export default function App() {
     setSubmitError("");
   }
 
+  // Close the modal and clear all temporary form data.
   function handleCloseAddPlantModal() {
     setIsAddPlantOpen(false);
     resetAddPlantState();
   }
 
+  // Keep the form state controlled so validation can run before submit.
   function handleNewPlantInputChange(event) {
     const { name, value } = event.target;
+    setSubmitError("");
     setNewPlantInput((prev) => ({
       ...prev,
       [name]: value
     }));
   }
 
+  // Validate locally, then send the cleaned payload to the API.
   async function handleNewPlantSubmit(event) {
     event.preventDefault();
+
+    const nameError = validateClientTextField(newPlantInput.name, FIELD_LIMITS.name, "Name");
+    const sortError = validateClientTextField(newPlantInput.sort, FIELD_LIMITS.sort, "Sort");
+    const wateringError = validateClientTextField(
+      newPlantInput.shouldBeWatered,
+      FIELD_LIMITS.shouldBeWatered,
+      "Water preference"
+    );
+    const moodError = validateClientTextField(newPlantInput.mood, FIELD_LIMITS.mood, "Mood");
+    const fileNameError = validateClientTextField(newPlantInput.imageFileName, FIELD_LIMITS.imageFileName, "Image file name");
+
+    if (nameError || sortError || wateringError || moodError || fileNameError) {
+      setSubmitError(nameError || sortError || wateringError || moodError || fileNameError);
+      return;
+    }
 
     if (!pastedImageDataUrl) {
       setSubmitError("Paste an image before creating the plant.");
@@ -78,6 +126,7 @@ export default function App() {
     }
   }
 
+  // Convert a pasted clipboard image into previewable/uploadable data.
   function handleImagePaste(payload) {
     if (payload.error) {
       setPastedImageDataUrl("");
@@ -90,6 +139,7 @@ export default function App() {
     setSubmitError("");
   }
 
+  // Load the initial plant list once when the app starts.
   useEffect(() => {
     async function loadPlants() {
       try {
@@ -107,6 +157,7 @@ export default function App() {
     <main className="page">
       <h1>Greenhouse Princess</h1>
 
+      {/* Hero section and action button stay together as the page header. */}
       <section className="hero-row">
         <section className="hero">
           <h1>Your Digital Garden</h1>
@@ -117,12 +168,15 @@ export default function App() {
         </button>
       </section>
       {error ? <p className="state-message state-message--error">{error}</p> : null}
+
+      {/* Render the current collection of plants as cards. */}
       <section className="plant-grid">
         {plants.map((plant) => (
           <PlantCard key={plant.id} plant={plant} />
         ))}
       </section>
 
+      {/* Modal lives outside the grid so it can open/close independently. */}
       <AddPlantPage
         isOpen={isAddPlantOpen}
         newPlantInput={newPlantInput}
@@ -134,6 +188,7 @@ export default function App() {
         imageStatus={pasteStatus}
         submitError={submitError}
         isSubmitting={isSubmitting}
+        fieldLimits={FIELD_LIMITS}
       />
     </main>
   );
