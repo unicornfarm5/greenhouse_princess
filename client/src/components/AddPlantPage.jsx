@@ -1,6 +1,49 @@
 import React from "react";
 
-export default function AddPlantPage({ isOpen, newPlantInput, onInputChange, onSubmit, onClose }) {
+export default function AddPlantPage({
+  isOpen,
+  newPlantInput,
+  onInputChange,
+  onSubmit,
+  onClose,
+  onImagePaste,
+  imagePreview,
+  imageStatus,
+  submitError,
+  isSubmitting
+}) {
+  // Read an image directly from clipboard and convert it to a data URL for preview/upload.
+  function handlePaste(event) {
+    const items = event.clipboardData?.items || [];
+    const imageItem = Array.from(items).find((item) => item.type.startsWith("image/"));
+
+    if (!imageItem) {
+      onImagePaste({ error: "Clipboard does not contain an image." });
+      return;
+    }
+
+    const file = imageItem.getAsFile();
+    if (!file) {
+      onImagePaste({ error: "Could not read image from clipboard." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        onImagePaste({ error: "Invalid image data." });
+        return;
+      }
+
+      onImagePaste({
+        imageDataUrl: reader.result,
+        status: `Image pasted (${file.type || "unknown type"}).`
+      });
+    };
+    reader.onerror = () => onImagePaste({ error: "Failed to read pasted image." });
+    reader.readAsDataURL(file);
+  }
+
   if (!isOpen) {
     return null;
   }
@@ -28,19 +71,30 @@ export default function AddPlantPage({ isOpen, newPlantInput, onInputChange, onS
           <label htmlFor="mood">Mood</label>
           <input id="mood" name="mood" value={newPlantInput.mood} onChange={onInputChange} required />
 
-          <label htmlFor="picture">Picture path</label>
+          <label htmlFor="imageFileName">Image file name</label>
           <input
-            id="picture"
-            name="picture"
-            value={newPlantInput.picture}
+            id="imageFileName"
+            name="imageFileName"
+            value={newPlantInput.imageFileName}
             onChange={onInputChange}
-            placeholder="/plants/new-plant.png"
+            placeholder="my-new-plant"
             required
           />
 
+          <label>Paste image</label>
+          <section className="paste-zone" onPaste={handlePaste} tabIndex={0} role="button" aria-label="Paste image here">
+            Click here and press Ctrl+V to paste a plant image
+          </section>
+
+          {imageStatus ? <p className="paste-status">{imageStatus}</p> : null}
+          {imagePreview ? <img className="paste-preview" src={imagePreview} alt="Pasted plant preview" /> : null}
+          {submitError ? <p className="state-message state-message--error">{submitError}</p> : null}
+
           <section className="add-plant-form__actions">
-            <button type="submit">Log input</button>
-            <button type="button" onClick={onClose}>
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Create plant"}
+            </button>
+            <button type="button" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </button>
           </section>
