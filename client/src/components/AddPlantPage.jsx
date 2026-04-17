@@ -10,7 +10,8 @@ export default function AddPlantPage({
   imagePreview,
   imageStatus,
   submitError,
-  isSubmitting
+  isSubmitting,
+  fieldLimits
 }) {
   // Read an image directly from clipboard and convert it to a data URL for preview/upload.
   function handlePaste(event) {
@@ -54,10 +55,10 @@ export default function AddPlantPage({
         <h2>Add a new plant</h2>
         <form className="add-plant-form" onSubmit={onSubmit}>
           <label htmlFor="name">Name</label>
-          <input id="name" name="name" value={newPlantInput.name} onChange={onInputChange} required />
+          <input id="name" name="name" value={newPlantInput.name} onChange={onInputChange} maxLength={fieldLimits.name} required />
 
           <label htmlFor="sort">Sort</label>
-          <input id="sort" name="sort" value={newPlantInput.sort} onChange={onInputChange} required />
+          <input id="sort" name="sort" value={newPlantInput.sort} onChange={onInputChange} maxLength={fieldLimits.sort} required />
 
           <label htmlFor="shouldBeWatered">Water preference</label>
           <input
@@ -65,11 +66,12 @@ export default function AddPlantPage({
             name="shouldBeWatered"
             value={newPlantInput.shouldBeWatered}
             onChange={onInputChange}
+            maxLength={fieldLimits.shouldBeWatered}
             required
           />
 
           <label htmlFor="mood">Mood</label>
-          <input id="mood" name="mood" value={newPlantInput.mood} onChange={onInputChange} required />
+          <input id="mood" name="mood" value={newPlantInput.mood} onChange={onInputChange} maxLength={fieldLimits.mood} required />
 
           <label htmlFor="imageFileName">Image file name</label>
           <input
@@ -78,8 +80,10 @@ export default function AddPlantPage({
             value={newPlantInput.imageFileName}
             onChange={onInputChange}
             placeholder="my-new-plant"
+            maxLength={fieldLimits.imageFileName}
             required
           />
+          <p className="paste-status">Keep the file name short and simple. It will be sanitized on the server.</p>
 
           <label>Paste image</label>
           <section className="paste-zone" onPaste={handlePaste} tabIndex={0} role="button" aria-label="Paste image here">

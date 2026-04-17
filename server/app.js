@@ -3,6 +3,8 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const port = 3001;
@@ -10,6 +12,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const plantsFilePath = path.join(__dirname, "plants.json");
 const plantImagesDir = path.resolve(__dirname, "..", "client", "public", "plants");
+const ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3001", "http://127.0.0.1:3001"];
+// Cap uploaded image payloads so a paste action cannot turn into a large local DoS.
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const FIELD_LIMITS = {
+  name: 80,
+  sort: 80,
+  shouldBeWatered: 120,
+  mood: 40,
+  imageFileName: 120
+};
 
 class Plant {
   constructor({ id, name, sort, shouldBeWatered, mood, picture }) {
@@ -20,6 +32,20 @@ class Plant {
     this.mood = mood;
     this.picture = picture;
   }
+}
+
+function validateTextField(value, maxLength) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed || trimmed.length > maxLength) {
+    return null;
+  }
+
+  return trimmed;
 }
 
 const starterPlants = [
@@ -104,6 +130,32 @@ function uniqueImageFileName(baseName, extension) {
   return candidate;
 }
 
+function validateImageMagicBytes(binary, extension) {
+  if (extension === "png") {
+    return binary.length >= 4 && binary[0] === 0x89 && binary[1] === 0x50 && binary[2] === 0x4e && binary[3] === 0x47;
+  }
+
+  if (extension === "jpg") {
+    return binary.length >= 3 && binary[0] === 0xff && binary[1] === 0xd8 && binary[2] === 0xff;
+  }
+
+  if (extension === "webp") {
+    return (
+      binary.length >= 12 &&
+      binary[0] === 0x52 &&
+      binary[1] === 0x49 &&
+      binary[2] === 0x46 &&
+      binary[3] === 0x46 &&
+      binary[8] === 0x57 &&
+      binary[9] === 0x45 &&
+      binary[10] === 0x42 &&
+      binary[11] === 0x50
+    );
+  }
+
+  return false;
+}
+
 // Accept only pasted image data URLs we can safely decode and store.
 function parseDataUrl(dataUrl) {
   const match = /^data:(image\/(png|jpeg|webp));base64,(.+)$/i.exec(dataUrl || "");
@@ -126,7 +178,12 @@ function parseDataUrl(dataUrl) {
 
   try {
     const binary = Buffer.from(match[3], "base64");
-    if (binary.length === 0) {
+    if (binary.length === 0 || binary.length > MAX_IMAGE_BYTES) {
+      return null;
+    }
+
+    // Mime strings are easy to spoof, so we also check the file signature.
+    if (!validateImageMagicBytes(binary, extension)) {
       return null;
     }
 
@@ -142,8 +199,29 @@ function nextPlantId(currentPlants) {
 
 let plants = loadPlantsFromFile();
 
-app.use(cors());
+app.use(helmet());
+// Local allowlist keeps the API open for dev tooling without exposing it broadly.
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("CORS not allowed"));
+    }
+  })
+);
 app.use(express.json({ limit: "10mb" }));
+
+// Simple request cap so the create endpoint cannot be spammed locally.
+const plantCreationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 app.get("/api/all_plants", (_req, res) => {
   res.json({ plants });
@@ -164,10 +242,16 @@ app.get("/api/id/:id", (req, res) => {
 // ----------------------
 // Add New Plant Flow API
 // ----------------------
-app.post("/api/plants", (req, res) => {
+app.post("/api/plants", plantCreationLimiter, (req, res) => {
   const { name, sort, shouldBeWatered, mood, imageFileName, imageDataUrl } = req.body || {};
 
-  if (!name || !sort || !shouldBeWatered || !mood || !imageFileName || !imageDataUrl) {
+  const validatedName = validateTextField(name, FIELD_LIMITS.name);
+  const validatedSort = validateTextField(sort, FIELD_LIMITS.sort);
+  const validatedShouldBeWatered = validateTextField(shouldBeWatered, FIELD_LIMITS.shouldBeWatered);
+  const validatedMood = validateTextField(mood, FIELD_LIMITS.mood);
+  const validatedImageFileName = validateTextField(imageFileName, FIELD_LIMITS.imageFileName);
+
+  if (!validatedName || !validatedSort || !validatedShouldBeWatered || !validatedMood || !validatedImageFileName || !imageDataUrl) {
     res.status(400).json({ error: "Missing required fields." });
     return;
   }
@@ -178,7 +262,7 @@ app.post("/api/plants", (req, res) => {
     return;
   }
 
-  const sanitizedBaseName = sanitizeFileBaseName(imageFileName);
+  const sanitizedBaseName = sanitizeFileBaseName(validatedImageFileName);
   if (!sanitizedBaseName) {
     res.status(400).json({ error: "Invalid image file name." });
     return;
@@ -193,10 +277,10 @@ app.post("/api/plants", (req, res) => {
 
     const createdPlant = new Plant({
       id: nextPlantId(plants),
-      name,
-      sort,
-      shouldBeWatered,
-      mood,
+      name: validatedName,
+      sort: validatedSort,
+      shouldBeWatered: validatedShouldBeWatered,
+      mood: validatedMood,
       picture: `/plants/${fileName}`
     });
 
