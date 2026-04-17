@@ -21,7 +21,7 @@ npm run dev
 
 - `http://localhost:5173`
 
-## Where to view frontend and endpoints 🪴
+## View frontend and endpoints 🪴
 
 After `npm run dev` is running:
 
