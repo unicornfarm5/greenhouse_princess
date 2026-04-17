@@ -14,6 +14,12 @@ export default function AddPlantPage({
   fieldLimits,
   isTemporaryMode
 }) {
+  function handleBackdropClick(event) {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  }
+
   // Read an image directly from clipboard and convert it to a data URL for preview/upload.
   function handlePaste(event) {
     const items = event.clipboardData?.items || [];
@@ -51,8 +57,11 @@ export default function AddPlantPage({
   }
 
   return (
-    <section className="add-plant-modal-backdrop">
-      <section className="add-plant-modal">
+    <section className="add-plant-modal-backdrop" onClick={handleBackdropClick}>
+      <section className="add-plant-modal" onClick={(event) => event.stopPropagation()}>
+        <button className="add-plant-modal__close" type="button" onClick={onClose} aria-label="Close add plant dialog">
+          ×
+        </button>
         <h2>Add a new plant</h2>
         {isTemporaryMode ? (
           <p className="paste-status">Demo mode: this flower only exists in your current tab and resets on refresh.</p>
@@ -101,9 +110,6 @@ export default function AddPlantPage({
           <section className="add-plant-form__actions">
             <button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : isTemporaryMode ? "Create temporary plant" : "Create plant"}
-            </button>
-            <button type="button" onClick={onClose} disabled={isSubmitting}>
-              Cancel
             </button>
           </section>
         </form>
