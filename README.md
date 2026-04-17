@@ -2,6 +2,8 @@
 
 Minimal local React + Express plant app🪩🪴
 
+![Pixel plant mascot](client/public/plants/pixel_plant.png)
+
 
 ## Getting started 🪴
 

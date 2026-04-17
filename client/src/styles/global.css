@@ -214,6 +214,26 @@ body {
   line-height: 1.9;
 }
 
+.page-footer {
+  margin-top: 1.5rem;
+  padding-top: 2rem;
+  text-align: center;
+}
+
+.page-footer__text {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 0.62rem;
+  line-height: 1.9;
+}
+
+.page-footer__image {
+  display: block;
+  width: min(160px, 70%);
+  margin: 1rem auto 0;
+  image-rendering: pixelated;
+}
+
 .state-message {
   margin: 1.5rem 0 0;
   border: 3px solid var(--panel-border);

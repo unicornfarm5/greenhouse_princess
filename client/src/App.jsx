@@ -43,6 +43,7 @@ function validateClientTextField(value, maxLength, label) {
 
 export default function App() {
   const temporaryFlowersMode = isTemporaryFlowersMode();
+  const footerPlantImage = `${import.meta.env.BASE_URL}plants/pixel_plant.png`;
 
   // Main list state and modal state live here so the page stays predictable.
   const [plants, setPlants] = useState([]);
@@ -208,6 +209,13 @@ export default function App() {
           <PlantCard key={plant.id} plant={plant} />
         ))}
       </section>
+
+      <footer className="hero page-footer">
+        <h3 className="page-footer__text">Made with love and plant magic 🌱✨</h3>
+        <h3 className="page-footer__text">Thank you for visiting! 🌷✨</h3>
+        <h4 className="page-footer__text">Vibe coded by Linea</h4>
+        <img className="page-footer__image" src={footerPlantImage} alt="Pixel flower mascot" />
+      </footer>
 
       {/* Modal lives outside the grid so it can open/close independently. */}
       <AddPlantPage
