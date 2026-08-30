@@ -79,7 +79,7 @@ export async function fetchCurrentUser() {
 }
 
 export async function updateProfile(profile) {
-  const response = await fetch(`${API_BASE_URL}/profile`, {
+  const response = await fetch(`${API_BASE_URL}/auth/profile`, {
     method: "PATCH",
     headers: buildHeaders(),
     body: JSON.stringify(profile)
