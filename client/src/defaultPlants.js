@@ -1,3 +1,6 @@
+/* Name: Default plant data
+  Responsibility: Provide public starter plants and resolve their bundled image paths. */
+
 function publicPlantImage(fileName) {
   return `${import.meta.env.BASE_URL}plants/${fileName}`;
 }

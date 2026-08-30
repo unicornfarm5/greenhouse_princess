@@ -1,3 +1,6 @@
+/* Name: Plant routes
+  Responsibility: Handle authenticated plant listing, creation, editing, and deletion. */
+
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import {

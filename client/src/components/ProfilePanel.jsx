@@ -1,3 +1,6 @@
+/* Name: Profile panel
+  Responsibility: Display and submit the authenticated user's editable profile name. */
+
 import React, { useState } from "react";
 
 export default function ProfilePanel({ user, onSave, loading, error }) {

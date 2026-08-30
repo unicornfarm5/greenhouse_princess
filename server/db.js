@@ -1,3 +1,6 @@
+/* Name: PostgreSQL data access
+  Responsibility: Initialize the schema and execute user and plant database operations. */
+
 import pg from "pg";
 
 const { Pool } = pg;

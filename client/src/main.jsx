@@ -1,3 +1,6 @@
+/* Name: React entrypoint
+  Responsibility: Mount the application and load the global stylesheet. */
+
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";

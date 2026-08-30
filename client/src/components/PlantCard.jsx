@@ -1,3 +1,6 @@
+/* Name: Plant card
+  Responsibility: Display a plant and expose its edit and delete actions. */
+
 import React, { useState } from "react";
 import EditPlantForm from "./EditPlantForm.jsx";
 

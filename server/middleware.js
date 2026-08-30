@@ -1,3 +1,6 @@
+/* Name: Authentication middleware
+  Responsibility: Resolve bearer tokens and protect authenticated API routes. */
+
 import { findUserById, hasDatabase } from "./db.js";
 import { verifyToken } from "./auth.js";
 

@@ -1,3 +1,6 @@
+/* Name: Authentication routes
+  Responsibility: Handle signup, login, current-user, and profile API requests. */
+
 import { Router } from "express";
 import {
   createUser,

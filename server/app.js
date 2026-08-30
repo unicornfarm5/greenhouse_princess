@@ -1,3 +1,6 @@
+/* Name: Express server bootstrap
+  Responsibility: Configure middleware, initialize PostgreSQL, and register API routers. */
+
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";

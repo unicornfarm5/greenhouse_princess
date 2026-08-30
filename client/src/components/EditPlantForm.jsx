@@ -1,3 +1,6 @@
+/* Name: Edit plant form
+  Responsibility: Collect editable plant preferences, mood, and pasted image data. */
+
 import React, { useEffect, useState } from "react";
 
 export default function EditPlantForm({ plant, onSave, onCancel }) {

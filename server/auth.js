@@ -1,3 +1,6 @@
+/* Name: Authentication utilities
+  Responsibility: Create and verify tokens, hash passwords, and expose safe user data. */
+
 import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'greenhouse-princess-dev-secret';

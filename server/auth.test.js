@@ -1,3 +1,6 @@
+/* Name: Authentication tests
+  Responsibility: Verify token handling, public-user sanitization, and password security. */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 

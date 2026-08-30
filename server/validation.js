@@ -1,3 +1,6 @@
+/* Name: Request validation helpers
+  Responsibility: Define field limits and validate text and email input. */
+
 export const FIELD_LIMITS = {
   name: 80,
   sort: 80,

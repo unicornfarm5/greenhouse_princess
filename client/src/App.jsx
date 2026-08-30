@@ -1,3 +1,6 @@
+/* Name: Greenhouse application
+  Responsibility: Coordinate authentication, profile state, plant state, and page-level flows. */
+
 import React, { useEffect, useMemo, useState } from "react";
 import {
   createPlant,

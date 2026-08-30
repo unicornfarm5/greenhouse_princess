@@ -1,3 +1,6 @@
+/* Name: Authentication panel
+  Responsibility: Render login and signup fields and submit authentication input. */
+
 import React, { useState } from "react";
 
 export default function AuthPanel({ onSubmit, submitLabel, mode, onSwitchMode, loading, error }) {
