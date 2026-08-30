@@ -8,12 +8,14 @@ import rateLimit from "express-rate-limit";
 import {
   createPlant as createPlantRecord,
   createUser,
+  deletePlantById,
   findUserByEmail,
   findUserById,
   hasDatabase,
   initializeDatabase,
   listAllPlants,
   listPlantsByUser,
+  updatePlantById,
   updateUserName
 } from "./db.js";
 import { buildPublicUser, createToken, hashPassword, verifyPassword, verifyToken } from "./auth.js";
@@ -594,6 +596,101 @@ app.post("/api/plants", async (req, res) => {
   } catch {
     res.status(500).json({ error: "Failed to save plant." });
   }
+});
+
+app.patch("/api/plants/:id", async (req, res) => {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized." });
+    return;
+  }
+
+  const plantId = Number(req.params.id);
+  if (!Number.isInteger(plantId)) {
+    res.status(400).json({ error: "Invalid plant id." });
+    return;
+  }
+
+  const { shouldBeWatered, mood, imageDataUrl } = req.body || {};
+  const updateData = {};
+
+  if (shouldBeWatered !== undefined) {
+    const validatedWatering = validateTextField(shouldBeWatered, FIELD_LIMITS.shouldBeWatered);
+    if (!validatedWatering) {
+      res.status(400).json({ error: "A valid water preference is required." });
+      return;
+    }
+    updateData.wateringText = validatedWatering;
+  }
+
+  if (mood !== undefined) {
+    const validatedMood = validateTextField(mood, FIELD_LIMITS.mood);
+    if (!validatedMood) {
+      res.status(400).json({ error: "A valid mood is required." });
+      return;
+    }
+    updateData.mood = validatedMood;
+  }
+
+  if (imageDataUrl !== undefined && imageDataUrl !== null && imageDataUrl !== "") {
+    const parsedImage = parseDataUrl(imageDataUrl);
+    if (!parsedImage) {
+      res.status(400).json({ error: "Invalid image format. Use pasted png, jpeg or webp image." });
+      return;
+    }
+
+    updateData.imageData = parsedImage.binary;
+    updateData.imageMime = parsedImage.mimeType;
+    updateData.imageName = `plant-${plantId}.${parsedImage.extension}`;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ error: "No changes provided." });
+    return;
+  }
+
+  const updatedPlant = await updatePlantById({
+    id: plantId,
+    userId: Number(user.id),
+    ...updateData
+  });
+
+  if (!updatedPlant) {
+    res.status(404).json({ error: "Plant not found." });
+    return;
+  }
+
+  res.json({ plant: {
+    id: updatedPlant.id,
+    userId: updatedPlant.userId,
+    name: updatedPlant.name,
+    sort: updatedPlant.plantType,
+    shouldBeWatered: updatedPlant.wateringText,
+    mood: updatedPlant.mood,
+    picture: updatedPlant.imageData ? `data:${updatedPlant.imageMime};base64,${Buffer.from(updatedPlant.imageData).toString("base64")}` : null
+  } });
+});
+
+app.delete("/api/plants/:id", async (req, res) => {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized." });
+    return;
+  }
+
+  const plantId = Number(req.params.id);
+  if (!Number.isInteger(plantId)) {
+    res.status(400).json({ error: "Invalid plant id." });
+    return;
+  }
+
+  const deleted = await deletePlantById(plantId, Number(user.id));
+  if (!deleted) {
+    res.status(404).json({ error: "Plant not found." });
+    return;
+  }
+
+  res.json({ success: true, id: plantId });
 });
 
 app.post("/api/auth/signup", async (req, res) => {

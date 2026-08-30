@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   createPlant,
+  deletePlant,
   fetchCurrentUser,
   fetchPlants,
   isLoggedIn,
   login,
   logout,
   signup,
+  updatePlant,
   updateProfile
 } from "./api.js";
 import AddPlantPage from "./components/AddPlantPage.jsx";
@@ -220,6 +222,29 @@ export default function App() {
     }
   }
 
+  async function handlePlantUpdate(updatedPlant) {
+    try {
+      const nextPlant = await updatePlant(updatedPlant.id, {
+        shouldBeWatered: updatedPlant.shouldBeWatered,
+        mood: updatedPlant.mood,
+        imageDataUrl: updatedPlant.picture && updatedPlant.picture.startsWith("data:") ? updatedPlant.picture : undefined
+      });
+
+      setPlants((prev) => prev.map((plant) => (plant.id === nextPlant.id ? nextPlant : plant)));
+    } catch (submissionError) {
+      setError(submissionError.message || "Could not update plant.");
+    }
+  }
+
+  async function handlePlantDelete(plantId) {
+    try {
+      await deletePlant(plantId);
+      setPlants((prev) => prev.filter((plant) => plant.id !== plantId));
+    } catch (submissionError) {
+      setError(submissionError.message || "Could not delete plant.");
+    }
+  }
+
   function handleLogout() {
     logout();
     setUser(null);
@@ -276,7 +301,12 @@ export default function App() {
 
       <section className="plant-grid">
         {plants.map((plant) => (
-          <PlantCard key={plant.id} plant={plant} />
+          <PlantCard
+            key={plant.id}
+            plant={plant}
+            onUpdate={handlePlantUpdate}
+            onDelete={handlePlantDelete}
+          />
         ))}
       </section>
 

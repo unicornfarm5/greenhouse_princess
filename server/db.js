@@ -129,6 +129,72 @@ export async function createPlant({ userId, name, plantType, wateringText, mood,
   return result.rows[0];
 }
 
+export async function updatePlantById({ id, userId, wateringText, mood, imageData, imageMime, imageName }) {
+  if (!pool) {
+    return null;
+  }
+
+  const assignments = [];
+  const values = [];
+
+  if (wateringText !== undefined) {
+    assignments.push(`watering_text = $${values.length + 3}`);
+    values.push(wateringText);
+  }
+
+  if (mood !== undefined) {
+    assignments.push(`mood = $${values.length + 3}`);
+    values.push(mood);
+  }
+
+  if (imageData !== undefined) {
+    assignments.push(`image_data = $${values.length + 3}`);
+    values.push(imageData);
+  }
+
+  if (imageMime !== undefined) {
+    assignments.push(`image_mime = $${values.length + 3}`);
+    values.push(imageMime);
+  }
+
+  if (imageName !== undefined) {
+    assignments.push(`image_name = $${values.length + 3}`);
+    values.push(imageName);
+  }
+
+  if (assignments.length === 0) {
+    return null;
+  }
+
+  assignments.push(`updated_at = NOW()`);
+  values.unshift(id, userId);
+
+  const result = await pool.query(
+    `UPDATE plants
+     SET ${assignments.join(", ")}
+     WHERE id = $1 AND user_id = $2
+     RETURNING id, user_id AS "userId", name, plant_type AS "plantType", watering_text AS "wateringText", mood, image_data AS "imageData", image_mime AS "imageMime", image_name AS "imageName"`,
+    values
+  );
+
+  return result.rows[0] || null;
+}
+
+export async function deletePlantById(id, userId) {
+  if (!pool) {
+    return false;
+  }
+
+  const result = await pool.query(
+    `DELETE FROM plants
+     WHERE id = $1 AND user_id = $2
+     RETURNING id`,
+    [id, userId]
+  );
+
+  return result.rowCount > 0;
+}
+
 export async function listPlantsByUser(userId) {
   if (!pool) {
     return [];

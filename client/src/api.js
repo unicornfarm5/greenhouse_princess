@@ -120,3 +120,32 @@ export async function createPlant(plantInput) {
 
   return payload.plant;
 }
+
+export async function updatePlant(plantId, plantInput) {
+  const response = await fetch(`${API_BASE_URL}/plants/${plantId}`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify(plantInput)
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not update plant.");
+  }
+
+  return payload.plant;
+}
+
+export async function deletePlant(plantId) {
+  const response = await fetch(`${API_BASE_URL}/plants/${plantId}`, {
+    method: "DELETE",
+    headers: buildHeaders()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not delete plant.");
+  }
+
+  return payload;
+}
