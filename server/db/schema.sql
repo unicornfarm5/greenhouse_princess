@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS plants (
   plant_type VARCHAR(80) NOT NULL,
   watering_text VARCHAR(120) NOT NULL,
   mood VARCHAR(40) NOT NULL,
-  image_url TEXT NOT NULL,
+  image_data BYTEA,
+  image_mime VARCHAR(50),
+  image_name VARCHAR(120),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

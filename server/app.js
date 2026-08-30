@@ -219,7 +219,7 @@ function parseDataUrl(dataUrl) {
       return null;
     }
 
-    return { extension, binary };
+    return { extension, binary, mimeType };
   } catch {
     return null;
   }
@@ -433,7 +433,7 @@ app.get("/api/plants", async (req, res) => {
       sort: plant.plantType,
       shouldBeWatered: plant.wateringText,
       mood: plant.mood,
-      picture: plant.imageUrl
+      picture: plant.imageData ? `data:${plant.imageMime};base64,${Buffer.from(plant.imageData).toString("base64")}` : null
     })) });
     return;
   }
@@ -454,7 +454,7 @@ app.get("/api/all_plants", async (req, res) => {
         sort: plant.plantType,
         shouldBeWatered: plant.wateringText,
         mood: plant.mood,
-        picture: plant.imageUrl
+        picture: plant.imageData ? `data:${plant.imageMime};base64,${Buffer.from(plant.imageData).toString("base64")}` : null
       })) });
       return;
     }
@@ -492,7 +492,7 @@ app.get("/api/id/:id", async (req, res) => {
       sort: targetPlant.plantType,
       shouldBeWatered: targetPlant.wateringText,
       mood: targetPlant.mood,
-      picture: targetPlant.imageUrl
+      picture: targetPlant.imageData ? `data:${targetPlant.imageMime};base64,${Buffer.from(targetPlant.imageData).toString("base64")}` : null
     } });
     return;
   }
@@ -539,14 +539,15 @@ app.post("/api/plants", async (req, res) => {
     const targetImagePath = path.join(plantImagesDir, fileName);
 
     try {
-      fs.writeFileSync(targetImagePath, parsedImage.binary);
       const createdPlant = await createPlantRecord({
         userId: Number(user.id),
         name: validatedName,
         plantType: validatedSort,
         wateringText: validatedShouldBeWatered,
         mood: validatedMood,
-        imageUrl: `/uploads/plants/${fileName}`
+        imageData: parsedImage.binary,
+        imageMime: parsedImage.mimeType,
+        imageName: fileName
       });
 
       res.status(201).json({ plant: {
@@ -556,7 +557,7 @@ app.post("/api/plants", async (req, res) => {
         sort: createdPlant.plantType,
         shouldBeWatered: createdPlant.wateringText,
         mood: createdPlant.mood,
-        picture: createdPlant.imageUrl
+        picture: createdPlant.imageData ? `data:${createdPlant.imageMime};base64,${Buffer.from(createdPlant.imageData).toString("base64")}` : null
       } });
       return;
     } catch {

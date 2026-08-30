@@ -36,7 +36,9 @@ export async function initializeDatabase() {
       plant_type VARCHAR(80) NOT NULL,
       watering_text VARCHAR(120) NOT NULL,
       mood VARCHAR(40) NOT NULL,
-      image_url TEXT NOT NULL,
+      image_data BYTEA,
+      image_mime VARCHAR(50),
+      image_name VARCHAR(120),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -112,16 +114,16 @@ export async function updateUserName(id, name) {
   return result.rows[0] || null;
 }
 
-export async function createPlant({ userId, name, plantType, wateringText, mood, imageUrl }) {
+export async function createPlant({ userId, name, plantType, wateringText, mood, imageData, imageMime, imageName }) {
   if (!pool) {
     throw new Error("Database is not configured.");
   }
 
   const result = await pool.query(
-    `INSERT INTO plants (user_id, name, plant_type, watering_text, mood, image_url)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, user_id AS "userId", name, plant_type AS "plantType", watering_text AS "wateringText", mood, image_url AS "imageUrl"`,
-    [userId, name, plantType, wateringText, mood, imageUrl]
+    `INSERT INTO plants (user_id, name, plant_type, watering_text, mood, image_data, image_mime, image_name)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id, user_id AS "userId", name, plant_type AS "plantType", watering_text AS "wateringText", mood, image_data AS "imageData", image_mime AS "imageMime", image_name AS "imageName"`,
+    [userId, name, plantType, wateringText, mood, imageData || null, imageMime || null, imageName || null]
   );
 
   return result.rows[0];
@@ -133,7 +135,7 @@ export async function listPlantsByUser(userId) {
   }
 
   const result = await pool.query(
-    `SELECT id, user_id AS "userId", name, plant_type AS "plantType", watering_text AS "wateringText", mood, image_url AS "imageUrl"
+    `SELECT id, user_id AS "userId", name, plant_type AS "plantType", watering_text AS "wateringText", mood, image_data AS "imageData", image_mime AS "imageMime", image_name AS "imageName"
      FROM plants
      WHERE user_id = $1
      ORDER BY created_at DESC`,
@@ -149,7 +151,7 @@ export async function listAllPlants() {
   }
 
   const result = await pool.query(
-    `SELECT id, user_id AS "userId", name, plant_type AS "plantType", watering_text AS "wateringText", mood, image_url AS "imageUrl"
+    `SELECT id, user_id AS "userId", name, plant_type AS "plantType", watering_text AS "wateringText", mood, image_data AS "imageData", image_mime AS "imageMime", image_name AS "imageName"
      FROM plants
      ORDER BY created_at DESC`
   );
