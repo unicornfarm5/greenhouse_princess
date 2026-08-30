@@ -33,7 +33,6 @@ const FIELD_LIMITS = {
   sort: 80,
   shouldBeWatered: 120,
   mood: 40,
-  imageFileName: 120,
   email: 160,
   password: 128
 };
@@ -514,15 +513,14 @@ app.post("/api/plants", async (req, res) => {
     return;
   }
 
-  const { name, sort, shouldBeWatered, mood, imageFileName, imageDataUrl } = req.body || {};
+  const { name, sort, shouldBeWatered, mood, imageDataUrl } = req.body || {};
 
   const validatedName = validateTextField(name, FIELD_LIMITS.name);
   const validatedSort = validateTextField(sort, FIELD_LIMITS.sort);
   const validatedShouldBeWatered = validateTextField(shouldBeWatered, FIELD_LIMITS.shouldBeWatered);
   const validatedMood = validateTextField(mood, FIELD_LIMITS.mood);
-  const validatedImageFileName = validateTextField(imageFileName, FIELD_LIMITS.imageFileName);
 
-  if (!validatedName || !validatedSort || !validatedShouldBeWatered || !validatedMood || !validatedImageFileName || !imageDataUrl) {
+  if (!validatedName || !validatedSort || !validatedShouldBeWatered || !validatedMood || !imageDataUrl) {
     res.status(400).json({ error: "Missing required fields." });
     return;
   }
@@ -534,10 +532,6 @@ app.post("/api/plants", async (req, res) => {
       return;
     }
 
-    const sanitizedBaseName = sanitizeFileBaseName(validatedImageFileName);
-    const fileName = uniqueImageFileName(sanitizedBaseName || "plant", parsedImage.extension);
-    const targetImagePath = path.join(plantImagesDir, fileName);
-
     try {
       const createdPlant = await createPlantRecord({
         userId: Number(user.id),
@@ -547,7 +541,7 @@ app.post("/api/plants", async (req, res) => {
         mood: validatedMood,
         imageData: parsedImage.binary,
         imageMime: parsedImage.mimeType,
-        imageName: fileName
+        imageName: `plant-${Date.now()}.${parsedImage.extension}`
       });
 
       res.status(201).json({ plant: {
