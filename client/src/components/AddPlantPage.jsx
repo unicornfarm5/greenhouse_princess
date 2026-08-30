@@ -86,18 +86,6 @@ export default function AddPlantPage({
           <label htmlFor="mood">Mood</label>
           <input id="mood" name="mood" value={newPlantInput.mood} onChange={onInputChange} maxLength={fieldLimits.mood} required />
 
-          <label htmlFor="imageFileName">Image file name</label>
-          <input
-            id="imageFileName"
-            name="imageFileName"
-            value={newPlantInput.imageFileName}
-            onChange={onInputChange}
-            placeholder="my-new-plant"
-            maxLength={fieldLimits.imageFileName}
-            required
-          />
-          <p className="paste-status">Keep the file name short and simple. It will be sanitized on the server.</p>
-
           <label>Paste image</label>
           <section className="paste-zone" onPaste={handlePaste} tabIndex={0} role="button" aria-label="Paste image here">
             Click here and press Ctrl+V to paste a plant image

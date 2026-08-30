@@ -1,28 +1,33 @@
-import React from "react";
-import { useEffect, useState } from "react";
-import { createPlant, fetchPlants, isTemporaryFlowersMode } from "./api.js";
-import { DEFAULT_PLANTS } from "./defaultPlants.js";
-import PlantCard from "./components/PlantCard.jsx";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  createPlant,
+  fetchCurrentUser,
+  fetchPlants,
+  isLoggedIn,
+  login,
+  logout,
+  signup,
+  updateProfile
+} from "./api.js";
 import AddPlantPage from "./components/AddPlantPage.jsx";
+import AuthPanel from "./components/AuthPanel.jsx";
+import PlantCard from "./components/PlantCard.jsx";
+import ProfilePanel from "./components/ProfilePanel.jsx";
 
 const EMPTY_NEW_PLANT = {
   name: "",
   sort: "",
   shouldBeWatered: "",
-  mood: "",
-  imageFileName: ""
+  mood: ""
 };
 
-// Keep the client aligned with the server so we catch invalid input early.
 const FIELD_LIMITS = {
   name: 80,
   sort: 80,
   shouldBeWatered: 120,
-  mood: 40,
-  imageFileName: 120
+  mood: 40
 };
 
-// Small client-side guardrails for a cleaner form experience.
 function validateClientTextField(value, maxLength, label) {
   if (typeof value !== "string") {
     return `${label} must be text.`;
@@ -42,11 +47,14 @@ function validateClientTextField(value, maxLength, label) {
 }
 
 export default function App() {
-  const temporaryFlowersMode = isTemporaryFlowersMode();
-  const footerPlantImage = `${import.meta.env.BASE_URL}plants/pixel_plant.png`;
-
-  // Main list state and modal state live here so the page stays predictable.
+  const [user, setUser] = useState(null);
+  const [authMode, setAuthMode] = useState("login");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const [plants, setPlants] = useState([]);
+  const [isLoadingPlants, setIsLoadingPlants] = useState(false);
   const [error, setError] = useState("");
   const [isAddPlantOpen, setIsAddPlantOpen] = useState(false);
   const [newPlantInput, setNewPlantInput] = useState(EMPTY_NEW_PLANT);
@@ -55,7 +63,52 @@ export default function App() {
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset modal state to avoid stale text/image when reopening.
+  const footerPlantImage = `${import.meta.env.BASE_URL}plants/pixel_plant.png`;
+  const loggedIn = useMemo(() => isLoggedIn(), [user]);
+
+  useEffect(() => {
+    const bootstrap = async () => {
+      if (!isLoggedIn()) {
+        setUser(null);
+        setPlants([]);
+        return;
+      }
+
+      try {
+        const currentUser = await fetchCurrentUser();
+        setUser(currentUser);
+      } catch {
+        setUser(null);
+        logout();
+      }
+    };
+
+    void bootstrap();
+  }, []);
+
+  useEffect(() => {
+    if (!loggedIn) {
+      setPlants([]);
+      return;
+    }
+
+    async function loadPlants() {
+      setIsLoadingPlants(true);
+      setError("");
+
+      try {
+        const nextPlants = await fetchPlants();
+        setPlants(nextPlants);
+      } catch {
+        setError("Could not load your plants.");
+      } finally {
+        setIsLoadingPlants(false);
+      }
+    }
+
+    void loadPlants();
+  }, [loggedIn]);
+
   function resetAddPlantState() {
     setNewPlantInput(EMPTY_NEW_PLANT);
     setPastedImageDataUrl("");
@@ -69,89 +122,17 @@ export default function App() {
     setSubmitError("");
   }
 
-  // Close the modal and clear all temporary form data.
   function handleCloseAddPlantModal() {
     setIsAddPlantOpen(false);
     resetAddPlantState();
   }
 
-  // Keep the form state controlled so validation can run before submit.
   function handleNewPlantInputChange(event) {
     const { name, value } = event.target;
     setSubmitError("");
-    setNewPlantInput((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    setNewPlantInput((prev) => ({ ...prev, [name]: value }));
   }
 
-  // Validate locally, then send the cleaned payload to the API.
-  async function handleNewPlantSubmit(event) {
-    event.preventDefault();
-
-    const nameError = validateClientTextField(newPlantInput.name, FIELD_LIMITS.name, "Name");
-    const sortError = validateClientTextField(newPlantInput.sort, FIELD_LIMITS.sort, "Sort");
-    const wateringError = validateClientTextField(
-      newPlantInput.shouldBeWatered,
-      FIELD_LIMITS.shouldBeWatered,
-      "Water preference"
-    );
-    const moodError = validateClientTextField(newPlantInput.mood, FIELD_LIMITS.mood, "Mood");
-    const fileNameError = validateClientTextField(newPlantInput.imageFileName, FIELD_LIMITS.imageFileName, "Image file name");
-
-    if (nameError || sortError || wateringError || moodError || fileNameError) {
-      setSubmitError(nameError || sortError || wateringError || moodError || fileNameError);
-      return;
-    }
-
-    if (!pastedImageDataUrl) {
-      setSubmitError("Paste an image before creating the plant.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError("");
-
-    try {
-      const normalizedPlant = {
-        name: newPlantInput.name.trim(),
-        sort: newPlantInput.sort.trim(),
-        shouldBeWatered: newPlantInput.shouldBeWatered.trim(),
-        mood: newPlantInput.mood.trim(),
-        imageFileName: newPlantInput.imageFileName.trim()
-      };
-
-      if (temporaryFlowersMode) {
-        const temporaryPlant = {
-          id: `temp-${Date.now()}-${Math.round(Math.random() * 10000)}`,
-          ...normalizedPlant,
-          picture: pastedImageDataUrl
-        };
-
-        setPlants((prev) => [...prev, temporaryPlant]);
-        setIsAddPlantOpen(false);
-        resetAddPlantState();
-        return;
-      }
-
-      // Send metadata + pasted image data URL to the API.
-      const createdPlant = await createPlant({
-        ...normalizedPlant,
-        imageDataUrl: pastedImageDataUrl
-      });
-
-      // Optimistically append so the new card appears immediately.
-      setPlants((prev) => [...prev, createdPlant]);
-      setIsAddPlantOpen(false);
-      resetAddPlantState();
-    } catch {
-      setSubmitError("Could not create plant.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  // Convert a pasted clipboard image into previewable/uploadable data.
   function handleImagePaste(payload) {
     if (payload.error) {
       setPastedImageDataUrl("");
@@ -164,60 +145,141 @@ export default function App() {
     setSubmitError("");
   }
 
-  // Load the initial plant list once when the app starts.
-  useEffect(() => {
-    if (temporaryFlowersMode) {
-      setPlants(DEFAULT_PLANTS);
-      setError("");
+  async function handleNewPlantSubmit(event) {
+    event.preventDefault();
+
+    const nameError = validateClientTextField(newPlantInput.name, FIELD_LIMITS.name, "Name");
+    const sortError = validateClientTextField(newPlantInput.sort, FIELD_LIMITS.sort, "Sort");
+    const wateringError = validateClientTextField(newPlantInput.shouldBeWatered, FIELD_LIMITS.shouldBeWatered, "Water preference");
+    const moodError = validateClientTextField(newPlantInput.mood, FIELD_LIMITS.mood, "Mood");
+
+    if (nameError || sortError || wateringError || moodError) {
+      setSubmitError(nameError || sortError || wateringError || moodError);
       return;
     }
 
-    async function loadPlants() {
-      try {
-        const nextPlants = await fetchPlants();
-        setPlants(nextPlants);
-      } catch {
-        setError("Could not load plants.");
-      }
+    if (!pastedImageDataUrl) {
+      setSubmitError("Paste an image before creating the plant.");
+      return;
     }
 
-    void loadPlants();
-  }, [temporaryFlowersMode]);
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const createdPlant = await createPlant({
+        name: newPlantInput.name.trim(),
+        sort: newPlantInput.sort.trim(),
+        shouldBeWatered: newPlantInput.shouldBeWatered.trim(),
+        mood: newPlantInput.mood.trim(),
+        imageDataUrl: pastedImageDataUrl
+      });
+
+      setPlants((prev) => [...prev, createdPlant]);
+      setIsAddPlantOpen(false);
+      resetAddPlantState();
+    } catch (submissionError) {
+      setSubmitError(submissionError.message || "Could not create plant.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleAuthSubmit(formValues) {
+    setAuthError("");
+    setAuthLoading(true);
+
+    try {
+      const nextUser = authMode === "login"
+        ? await login({ email: formValues.email, password: formValues.password })
+        : await signup({ name: formValues.name, email: formValues.email, password: formValues.password });
+
+      setUser(nextUser);
+      setAuthMode("login");
+    } catch (submissionError) {
+      setAuthError(submissionError.message || "Authentication failed.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleProfileSave(formValues) {
+    setProfileError("");
+    setProfileLoading(true);
+
+    try {
+      const nextUser = await updateProfile({
+        name: formValues.name
+      });
+
+      setUser(nextUser);
+    } catch (submissionError) {
+      setProfileError(submissionError.message || "Could not save profile.");
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  function handleLogout() {
+    logout();
+    setUser(null);
+    setPlants([]);
+  }
+
+  if (!loggedIn) {
+    return (
+      <main className="page auth-page">
+        <section className="hero">
+          <p className="hero__kicker">Greenhouse Princess</p>
+          <h1>Your digital greenhouse</h1>
+          <p className="hero__description">Sign in to keep your plants, profile and photos in one private garden.</p>
+        </section>
+
+        <AuthPanel
+          mode={authMode}
+          onSubmit={handleAuthSubmit}
+          onSwitchMode={() => setAuthMode((prev) => (prev === "login" ? "signup" : "login"))}
+          loading={authLoading}
+          error={authError}
+          submitLabel={authMode === "login" ? "Log in" : "Create account"}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="page">
-      <h1>Greenhouse Princess</h1>
-
-      {/* Hero section and action button stay together as the page header. */}
-      <section className="hero-row">
-        <section className="hero">
+      <header className="topbar">
+        <div>
+          <p className="hero__kicker">Greenhouse Princess</p>
           <h1>Your Digital Garden</h1>
-          <p className="hero__description">These are your first plants ! Feel free to explore🌷</p>
-        </section>
-        <button className="add-plant-button" type="button" onClick={handleAddNewPlantClick}>
-          {temporaryFlowersMode ? "Add a temporary plant" : "Add a new plant"}
-        </button>
-      </section>
-      {temporaryFlowersMode ? (
-        <p className="state-message">Demo mode: new flowers are only saved until refresh.</p>
-      ) : null}
-      {error ? <p className="state-message state-message--error">{error}</p> : null}
+        </div>
 
-      {/* Render the current collection of plants as cards. */}
+        <div className="topbar__actions">
+          <button type="button" className="secondary-button" onClick={handleAddNewPlantClick}>Add plant</button>
+          <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
+        </div>
+      </header>
+
+      <section className="dashboard">
+        <ProfilePanel user={user} onSave={handleProfileSave} loading={profileLoading} error={profileError} />
+
+        <section className="profile-summary">
+          <h2>Welcome back</h2>
+          <p>{user?.name}</p>
+          <p>{user?.email}</p>
+        </section>
+      </section>
+
+      {error ? <p className="state-message state-message--error">{error}</p> : null}
+      {isLoadingPlants ? <p className="state-message">Loading plants...</p> : null}
+
       <section className="plant-grid">
         {plants.map((plant) => (
           <PlantCard key={plant.id} plant={plant} />
         ))}
       </section>
 
-      <footer className="hero page-footer">
-        <h3 className="page-footer__text">Made with love and plant magic 🌱✨</h3>
-        <h3 className="page-footer__text">Thank you for visiting! 🌷✨</h3>
-        <h4 className="page-footer__text">Vibe coded by Linea</h4>
-        <img className="page-footer__image" src={footerPlantImage} alt="Pixel flower mascot" />
-      </footer>
-
-      {/* Modal lives outside the grid so it can open/close independently. */}
       <AddPlantPage
         isOpen={isAddPlantOpen}
         newPlantInput={newPlantInput}
@@ -230,8 +292,16 @@ export default function App() {
         submitError={submitError}
         isSubmitting={isSubmitting}
         fieldLimits={FIELD_LIMITS}
-        isTemporaryMode={temporaryFlowersMode}
+        isTemporaryMode={false}
       />
+
+       <footer className="hero page-footer">
+        <h3 className="page-footer__text">Made with love 🌱✨</h3>
+        <h3 className="page-footer__text">Thank you for visiting! 🌷✨</h3>
+        <h4 className="page-footer__text">Vibe coded by Linea</h4>
+        <img className="page-footer__image" src={footerPlantImage} alt="Pixel flower mascot" />
+      </footer>
+
     </main>
   );
 }
