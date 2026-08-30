@@ -23,7 +23,6 @@ const port = 3001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const plantsFilePath = path.join(__dirname, "plants.json");
-const usersFilePath = path.join(__dirname, "users.json");
 const uploadsDir = path.join(__dirname, "uploads");
 const plantImagesDir = path.join(uploadsDir, "plants");
 const avatarImagesDir = path.join(uploadsDir, "avatars");
@@ -153,16 +152,6 @@ function loadPlantsFromFile() {
   return parsed.map((plant) => new Plant(plant));
 }
 
-function loadUsersFromFile() {
-  ensureStorage();
-  const parsed = readJsonFile(usersFilePath, []);
-  return Array.isArray(parsed) ? parsed : [];
-}
-
-function saveUsersToFile(nextUsers) {
-  writeJsonFile(usersFilePath, nextUsers);
-}
-
 function uniqueImageFileName(baseName, extension) {
   let counter = 0;
   let candidate = `${baseName}.${extension}`;
@@ -240,12 +229,7 @@ function nextPlantId(currentPlants) {
   return currentPlants.reduce((maxId, plant) => Math.max(maxId, Number(plant.id) || 0), 0) + 1;
 }
 
-function nextUserId(currentUsers) {
-  return currentUsers.reduce((maxId, user) => Math.max(maxId, Number(user.id) || 0), 0) + 1;
-}
-
 let plants = loadPlantsFromFile();
-let users = loadUsersFromFile();
 
 function getBearerToken(req) {
   const authorization = req.headers.authorization || "";
@@ -267,21 +251,21 @@ async function getAuthenticatedUser(req) {
     return null;
   }
 
-  if (hasDatabase()) {
-    const user = await findUserById(payload.sub);
-    if (!user) {
-      return null;
-    }
-
-    return {
-      id: String(user.id),
-      email: user.email,
-      name: user.name,
-      passwordHash: user.password_hash
-    };
+  if (!hasDatabase()) {
+    return null;
   }
 
-  return users.find((user) => user.id === payload.sub) || null;
+  const user = await findUserById(payload.sub);
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: String(user.id),
+    email: user.email,
+    name: user.name,
+    passwordHash: user.password_hash
+  };
 }
 
 async function requireAuth(req, res, next) {
@@ -333,27 +317,28 @@ app.post("/api/auth/signup", async (req, res) => {
     return;
   }
 
-  if (users.some((user) => user.email === validatedEmail)) {
+  if (!hasDatabase()) {
+    res.status(503).json({ error: "Database is not configured." });
+    return;
+  }
+
+  const existingUser = await findUserByEmail(validatedEmail);
+  if (existingUser) {
     res.status(409).json({ error: "This email is already registered." });
     return;
   }
 
   try {
-    const newUser = {
-      id: String(nextUserId(users)),
+    const createdUser = await createUser({
       email: validatedEmail,
-      name: validatedName,
       passwordHash: await hashPassword(passwordText),
-      avatarUrl: null
-    };
+      name: validatedName
+    });
 
-    users.push(newUser);
-    saveUsersToFile(users);
-
-    const token = createToken(newUser);
+    const token = createToken({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name });
     res.status(201).json({
       token,
-      user: buildPublicUser(newUser)
+      user: buildPublicUser({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name })
     });
   } catch {
     res.status(500).json({ error: "Could not create account." });
@@ -369,22 +354,27 @@ app.post("/api/auth/login", async (req, res) => {
     return;
   }
 
-  const user = users.find((candidate) => candidate.email === email);
+  if (!hasDatabase()) {
+    res.status(503).json({ error: "Database is not configured." });
+    return;
+  }
+
+  const user = await findUserByEmail(email);
   if (!user) {
     res.status(401).json({ error: "Invalid email or password." });
     return;
   }
 
-  const matches = await verifyPassword(passwordText, user.passwordHash);
+  const matches = await verifyPassword(passwordText, user.password_hash);
   if (!matches) {
     res.status(401).json({ error: "Invalid email or password." });
     return;
   }
 
-  const token = createToken(user);
+  const token = createToken({ id: String(user.id), email: user.email, name: user.name });
   res.json({
     token,
-    user: buildPublicUser(user)
+    user: buildPublicUser({ id: String(user.id), email: user.email, name: user.name })
   });
 });
 
@@ -400,56 +390,31 @@ app.get("/api/auth/me", async (req, res) => {
 
 app.patch("/api/profile", async (req, res) => {
   const { name } = req.body || {};
-  console.log("[PATCH /api/profile] request", {
-    name,
-    hasAuthorization: Boolean(getBearerToken(req))
-  });
   const nextName = validateTextField(name, FIELD_LIMITS.name, 2);
 
   if (!nextName) {
-    console.log("[PATCH /api/profile] response", { status: 400, body: { error: "A valid name is required." } });
     res.status(400).json({ error: "A valid name is required." });
     return;
   }
 
   const authenticatedUser = await getAuthenticatedUser(req);
   if (!authenticatedUser) {
-    console.log("[PATCH /api/profile] response", { status: 401, body: { error: "Unauthorized." } });
     res.status(401).json({ error: "Unauthorized." });
     return;
   }
 
-  if (hasDatabase()) {
-    try {
-      const updatedUser = await updateUserName(authenticatedUser.id, nextName);
-      if (!updatedUser) {
-        console.log("[PATCH /api/profile] response", { status: 404, body: { error: "User not found." } });
-        res.status(404).json({ error: "User not found." });
-        return;
-      }
-
-      const body = { user: buildPublicUser({ ...updatedUser, email: authenticatedUser.email }) };
-      console.log("[PATCH /api/profile] response", { status: 200, body });
-      res.json(body);
-    } catch (error) {
-      console.error("[PATCH /api/profile] database error", error);
-      res.status(500).json({ error: "Could not update profile." });
+  try {
+    const updatedUser = await updateUserName(authenticatedUser.id, nextName);
+    if (!updatedUser) {
+      res.status(404).json({ error: "User not found." });
+      return;
     }
-    return;
-  }
 
-  const userIndex = users.findIndex((user) => user.id === authenticatedUser.id);
-  if (userIndex === -1) {
-    console.log("[PATCH /api/profile] response", { status: 404, body: { error: "User not found." } });
-    res.status(404).json({ error: "User not found." });
-    return;
+    res.json({ user: buildPublicUser({ ...updatedUser, email: authenticatedUser.email }) });
+  } catch (error) {
+    console.error("[PATCH /api/profile] database error", error);
+    res.status(500).json({ error: "Could not update profile." });
   }
-
-  users[userIndex].name = nextName;
-  saveUsersToFile(users);
-  const body = { user: buildPublicUser(users[userIndex]) };
-  console.log("[PATCH /api/profile] response", { status: 200, body });
-  res.json(body);
 });
 
 app.get("/api/plants", async (req, res) => {
@@ -647,49 +612,28 @@ app.post("/api/auth/signup", async (req, res) => {
     return;
   }
 
-  if (hasDatabase()) {
-    const existingUser = await findUserByEmail(validatedEmail);
-    if (existingUser) {
-      res.status(409).json({ error: "This email is already registered." });
-      return;
-    }
-
-    try {
-      const createdUser = await createUser({
-        email: validatedEmail,
-        passwordHash: await hashPassword(passwordText),
-        name: validatedName
-      });
-
-      const token = createToken({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name });
-      res.status(201).json({ token, user: buildPublicUser({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name }) });
-      return;
-    } catch {
-      res.status(500).json({ error: "Could not create account." });
-      return;
-    }
+  if (!hasDatabase()) {
+    res.status(503).json({ error: "Database is not configured." });
+    return;
   }
 
-  if (users.some((user) => user.email === validatedEmail)) {
+  const existingUser = await findUserByEmail(validatedEmail);
+  if (existingUser) {
     res.status(409).json({ error: "This email is already registered." });
     return;
   }
 
   try {
-    const newUser = {
-      id: String(nextUserId(users)),
+    const createdUser = await createUser({
       email: validatedEmail,
-      name: validatedName,
-      passwordHash: await hashPassword(passwordText)
-    };
+      passwordHash: await hashPassword(passwordText),
+      name: validatedName
+    });
 
-    users.push(newUser);
-    saveUsersToFile(users);
-
-    const token = createToken(newUser);
+    const token = createToken({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name });
     res.status(201).json({
       token,
-      user: buildPublicUser(newUser)
+      user: buildPublicUser({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name })
     });
   } catch {
     res.status(500).json({ error: "Could not create account." });
@@ -705,40 +649,27 @@ app.post("/api/auth/login", async (req, res) => {
     return;
   }
 
-  if (hasDatabase()) {
-    const user = await findUserByEmail(email);
-    if (!user) {
-      res.status(401).json({ error: "Invalid email or password." });
-      return;
-    }
-
-    const matches = await verifyPassword(passwordText, user.password_hash);
-    if (!matches) {
-      res.status(401).json({ error: "Invalid email or password." });
-      return;
-    }
-
-    const token = createToken({ id: String(user.id), email: user.email, name: user.name });
-    res.json({ token, user: buildPublicUser({ id: String(user.id), email: user.email, name: user.name }) });
+  if (!hasDatabase()) {
+    res.status(503).json({ error: "Database is not configured." });
     return;
   }
 
-  const user = users.find((candidate) => candidate.email === email);
+  const user = await findUserByEmail(email);
   if (!user) {
     res.status(401).json({ error: "Invalid email or password." });
     return;
   }
 
-  const matches = await verifyPassword(passwordText, user.passwordHash);
+  const matches = await verifyPassword(passwordText, user.password_hash);
   if (!matches) {
     res.status(401).json({ error: "Invalid email or password." });
     return;
   }
 
-  const token = createToken(user);
+  const token = createToken({ id: String(user.id), email: user.email, name: user.name });
   res.json({
     token,
-    user: buildPublicUser(user)
+    user: buildPublicUser({ id: String(user.id), email: user.email, name: user.name })
   });
 });
 

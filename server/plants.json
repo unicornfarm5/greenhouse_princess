@@ -5,7 +5,8 @@
     "sort": "devil's ivy",
     "shouldBeWatered": "Every 2 days",
     "mood": "Thriving",
-    "picture": "/plants/devilsivy.png"
+    "picture": "/plants/devilsivy.png",
+    "userId": null
   },
   {
     "id": 2,
@@ -13,7 +14,8 @@
     "sort": "philodendron",
     "shouldBeWatered": "Every 4 days",
     "mood": "Happy",
-    "picture": "/plants/philodendron.png"
+    "picture": "/plants/philodendron.png",
+    "userId": null
   },
   {
     "id": 3,
@@ -21,22 +23,7 @@
     "sort": "flamingo flower",
     "shouldBeWatered": "Every 2 days",
     "mood": "Blooming",
-    "picture": "/plants/flamingoflower.png"
-  },
-  {
-    "id": 4,
-    "name": "Lilly",
-    "sort": "English peacy lilly",
-    "shouldBeWatered": "once a week",
-    "mood": "Happy:)",
-    "picture": "/plants/lilly.png"
-  },
-  {
-    "id": 5,
-    "name": "Anna",
-    "sort": "sunflower",
-    "shouldBeWatered": "twice a week",
-    "mood": "yay",
-    "picture": "/plants/sunflower.png"
+    "picture": "/plants/flamingoflower.png",
+    "userId": null
   }
 ]

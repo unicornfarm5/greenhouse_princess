@@ -98,8 +98,7 @@ function buildPublicUser(user) {
   return {
     id: user.id,
     email: user.email,
-    name: user.name,
-    avatarUrl: user.avatarUrl || null
+    name: user.name
   };
 }
 

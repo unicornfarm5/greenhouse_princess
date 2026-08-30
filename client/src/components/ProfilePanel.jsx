@@ -2,8 +2,7 @@ import React, { useState } from "react";
 
 export default function ProfilePanel({ user, onSave, loading, error }) {
   const [form, setForm] = useState({
-    name: user?.name || "",
-    avatarUrl: user?.avatarUrl || ""
+    name: user?.name || ""
   });
 
   function handleChange(event) {
@@ -23,11 +22,6 @@ export default function ProfilePanel({ user, onSave, loading, error }) {
         <label>
           Name
           <input name="name" value={form.name} onChange={handleChange} maxLength={80} required />
-        </label>
-
-        <label>
-          Avatar URL
-          <input name="avatarUrl" value={form.avatarUrl} onChange={handleChange} placeholder="https://..." />
         </label>
 
         {error ? <p className="state-message state-message--error">{error}</p> : null}

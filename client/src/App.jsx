@@ -212,8 +212,7 @@ export default function App() {
 
     try {
       const nextUser = await updateProfile({
-        name: formValues.name,
-        avatarUrl: formValues.avatarUrl
+        name: formValues.name
       });
 
       setUser(nextUser);

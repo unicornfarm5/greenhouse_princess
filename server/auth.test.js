@@ -11,7 +11,7 @@ test('createToken + verifyToken round-trip works', () => {
   assert.equal(payload.email, 'demo@example.com');
 });
 
-test('buildPublicUser removes sensitive properties', () => {
+test('buildPublicUser removes sensitive properties and never exposes avatar data', () => {
   const user = {
     id: 'user-123',
     email: 'demo@example.com',
@@ -25,8 +25,7 @@ test('buildPublicUser removes sensitive properties', () => {
   assert.deepEqual(publicUser, {
     id: 'user-123',
     email: 'demo@example.com',
-    name: 'Demo user',
-    avatarUrl: '/uploads/avatars/default-avatar.svg'
+    name: 'Demo user'
   });
 });
 
