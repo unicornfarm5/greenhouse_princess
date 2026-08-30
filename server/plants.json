@@ -30,5 +30,13 @@
     "shouldBeWatered": "once a week",
     "mood": "Happy:)",
     "picture": "/plants/lilly.png"
+  },
+  {
+    "id": 5,
+    "name": "Anna",
+    "sort": "sunflower",
+    "shouldBeWatered": "twice a week",
+    "mood": "yay",
+    "picture": "/plants/sunflower.png"
   }
 ]
