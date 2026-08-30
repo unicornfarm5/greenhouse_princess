@@ -18,16 +18,14 @@ const EMPTY_NEW_PLANT = {
   name: "",
   sort: "",
   shouldBeWatered: "",
-  mood: "",
-  imageFileName: ""
+  mood: ""
 };
 
 const FIELD_LIMITS = {
   name: 80,
   sort: 80,
   shouldBeWatered: 120,
-  mood: 40,
-  imageFileName: 120
+  mood: 40
 };
 
 function validateClientTextField(value, maxLength, label) {
@@ -65,6 +63,7 @@ export default function App() {
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const footerPlantImage = `${import.meta.env.BASE_URL}plants/pixel_plant.png`;
   const loggedIn = useMemo(() => isLoggedIn(), [user]);
 
   useEffect(() => {
@@ -153,10 +152,9 @@ export default function App() {
     const sortError = validateClientTextField(newPlantInput.sort, FIELD_LIMITS.sort, "Sort");
     const wateringError = validateClientTextField(newPlantInput.shouldBeWatered, FIELD_LIMITS.shouldBeWatered, "Water preference");
     const moodError = validateClientTextField(newPlantInput.mood, FIELD_LIMITS.mood, "Mood");
-    const fileNameError = validateClientTextField(newPlantInput.imageFileName, FIELD_LIMITS.imageFileName, "Image file name");
 
-    if (nameError || sortError || wateringError || moodError || fileNameError) {
-      setSubmitError(nameError || sortError || wateringError || moodError || fileNameError);
+    if (nameError || sortError || wateringError || moodError) {
+      setSubmitError(nameError || sortError || wateringError || moodError);
       return;
     }
 
@@ -174,7 +172,6 @@ export default function App() {
         sort: newPlantInput.sort.trim(),
         shouldBeWatered: newPlantInput.shouldBeWatered.trim(),
         mood: newPlantInput.mood.trim(),
-        imageFileName: newPlantInput.imageFileName.trim(),
         imageDataUrl: pastedImageDataUrl
       });
 
@@ -297,6 +294,14 @@ export default function App() {
         fieldLimits={FIELD_LIMITS}
         isTemporaryMode={false}
       />
+
+       <footer className="hero page-footer">
+        <h3 className="page-footer__text">Made with love 🌱✨</h3>
+        <h3 className="page-footer__text">Thank you for visiting! 🌷✨</h3>
+        <h4 className="page-footer__text">Vibe coded by Linea</h4>
+        <img className="page-footer__image" src={footerPlantImage} alt="Pixel flower mascot" />
+      </footer>
+
     </main>
   );
 }
