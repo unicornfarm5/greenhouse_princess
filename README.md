@@ -1,76 +1,125 @@
 # greenhouse_princess 🌷🌱🌹✨
 
-Minimal local React + Express plant app🪩🪴
+A small React + Express app for managing a personal plant garden with login, user-owned plants, and a real PostgreSQL database.
 
 ![Pixel plant mascot](client/public/plants/pixel_plant.png)
 
+## What this project uses
 
-## Getting started 🪴
+- Frontend: React + Vite
+- Backend: Express + Node
+- Database: PostgreSQL via Supabase
+- Auth: JWT-based login/signup
+- No Docker
+- No local database server required for normal use
 
-1. Install dependencies:
+## Local setup
+
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Start server and client in parallel:
+### 2. Create a local .env file
+
+Create a file named `.env` in the project root:
+
+```env
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
+JWT_SECRET=replace-with-a-long-random-secret
+NODE_ENV=development
+```
+
+Copy the database URL from Supabase's **Connect** dialog and replace only the password if needed. Password characters such as `/`, `@`, `^`, `:` and `#` is best to avoid for easyness. The project reference in `db.YOUR_PROJECT_REF.supabase.co` must match the current Supabase project exactly.
+
+This file is local only and should not be committed.
+
+### 3. Create the database tables in Supabase
+
+In your Supabase dashboard, open the SQL editor and run the schema from:
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name VARCHAR(80) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS plants (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(80) NOT NULL,
+  plant_type VARCHAR(80) NOT NULL,
+  watering_text VARCHAR(120) NOT NULL,
+  mood VARCHAR(40) NOT NULL,
+  image_url TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 4. Start the app
+
+Run both frontend and backend together:
 
 ```bash
 npm run dev
 ```
 
-3. Open the app:
-
-- `http://localhost:5173`
-
-## View frontend and endpoints 🪴
-
-After `npm run dev` is running:
+Then open:
 
 - Frontend: `http://localhost:5173`
-- All plants endpoint: `http://localhost:3001/api/all_plants`
-- Single plant endpoint (example): `http://localhost:3001/api/id/plant-1`
+- Backend API: `http://localhost:3001/api/health`
 
-## API 🪴
+## API overview
 
-- `GET /api/all_plants`: returns all plants
-- `GET /api/id/:id`: returns one plant by id
+These endpoints are available on the backend:
 
-## Sharing mode (important) 🪴
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `PATCH /api/profile`
+- `GET /api/plants`
+- `POST /api/plants`
 
-The app now uses two add-flower modes:
+## GitHub secrets and deployment
 
-- Localhost/dev (`localhost` or `127.0.0.1`): new flowers are saved through the backend API.
-- Deployed demo (for example GitHub Pages): new flowers are temporary and only exist in the current tab. They disappear after page refresh.
+GitHub secrets are not used when you run the app locally.
+They are used when you deploy to a server or a hosting environment.
 
-This lets friends play with adding flowers without writing shared data.
+Typical production variables:
 
-### Optional env overrides
+```env
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
+JWT_SECRET=replace-with-a-long-random-secret
+NODE_ENV=production
+```
 
-You can force behavior with Vite env vars:
+Add them in GitHub:
 
-- `VITE_TEMP_FLOWERS_MODE=true` to always use temporary mode
-- `VITE_TEMP_FLOWERS_MODE=false` to always use backend-save mode
-- `VITE_API_BASE_URL=http://localhost:3001/api` (or another API URL) to change backend target
+- Settings → Secrets and variables → Actions → New repository secret
 
-## Deploy to GitHub Pages (auto) 🪴
+Example secret names:
 
-This repository is configured for auto deploy with GitHub Actions.
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `NODE_ENV`
 
-### One-time setup in GitHub
+## Supabase setup summary
 
-1. Open repository settings.
-2. Go to Pages.
-3. Under Build and deployment, choose Source: GitHub Actions.
+For this project, use:
 
-### Deploy flow
+- Connection method: Direct connection
+- Type: URI
+- Copy the full connection string
 
-1. Push to the `main` branch.
-2. GitHub Action in `.github/workflows/deploy-pages.yml` builds and deploys the frontend.
-3. Site URL: `https://unicornfarm5.github.io/greenhouse_princess/`
+If your hosting is IPv4-only, enable the Supabase IPv4 add-on.
 
-### Notes
+## Notes
 
-- GitHub Pages only hosts the frontend.
-- Backend write API is not deployed there.
-- Deployed site therefore uses temporary flowers mode by default.
+- The app is designed for a real PostgreSQL database
+- GitHub Pages is only for the frontend. The backend runs separately.

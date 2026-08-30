@@ -5,6 +5,17 @@ import path from "path";
 import { fileURLToPath } from "url";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import {
+  createPlant as createPlantRecord,
+  createUser,
+  findUserByEmail,
+  findUserById,
+  hasDatabase,
+  initializeDatabase,
+  listAllPlants,
+  listPlantsByUser,
+  updateUserName
+} from "./db.js";
 import { buildPublicUser, createToken, hashPassword, verifyPassword, verifyToken } from "./auth.js";
 
 const app = express();
@@ -245,7 +256,7 @@ function getBearerToken(req) {
   return authorization.slice(7).trim();
 }
 
-function getAuthenticatedUser(req) {
+async function getAuthenticatedUser(req) {
   const token = getBearerToken(req);
   if (!token) {
     return null;
@@ -256,11 +267,25 @@ function getAuthenticatedUser(req) {
     return null;
   }
 
+  if (hasDatabase()) {
+    const user = await findUserById(payload.sub);
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: String(user.id),
+      email: user.email,
+      name: user.name,
+      passwordHash: user.password_hash
+    };
+  }
+
   return users.find((user) => user.id === payload.sub) || null;
 }
 
-function requireAuth(req, res, next) {
-  const user = getAuthenticatedUser(req);
+async function requireAuth(req, res, next) {
+  const user = await getAuthenticatedUser(req);
   if (!user) {
     res.status(401).json({ error: "Unauthorized." });
     return;
@@ -363,46 +388,112 @@ app.post("/api/auth/login", async (req, res) => {
   });
 });
 
-app.get("/api/auth/me", requireAuth, (req, res) => {
-  res.json({ user: buildPublicUser(req.user) });
-});
-
-app.patch("/api/profile", requireAuth, (req, res) => {
-  const { name, avatarUrl } = req.body || {};
-  const nextName = validateTextField(name, FIELD_LIMITS.name, 2);
-  const nextAvatar = typeof avatarUrl === "string" ? avatarUrl.trim() : null;
-
-  if (!nextName && !nextAvatar) {
-    res.status(400).json({ error: "No profile changes provided." });
+app.get("/api/auth/me", async (req, res) => {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized." });
     return;
   }
 
-  const userIndex = users.findIndex((user) => user.id === req.user.id);
+  res.json({ user: buildPublicUser(user) });
+});
+
+app.patch("/api/profile", async (req, res) => {
+  const { name } = req.body || {};
+  console.log("[PATCH /api/profile] request", {
+    name,
+    hasAuthorization: Boolean(getBearerToken(req))
+  });
+  const nextName = validateTextField(name, FIELD_LIMITS.name, 2);
+
+  if (!nextName) {
+    console.log("[PATCH /api/profile] response", { status: 400, body: { error: "A valid name is required." } });
+    res.status(400).json({ error: "A valid name is required." });
+    return;
+  }
+
+  const authenticatedUser = await getAuthenticatedUser(req);
+  if (!authenticatedUser) {
+    console.log("[PATCH /api/profile] response", { status: 401, body: { error: "Unauthorized." } });
+    res.status(401).json({ error: "Unauthorized." });
+    return;
+  }
+
+  if (hasDatabase()) {
+    try {
+      const updatedUser = await updateUserName(authenticatedUser.id, nextName);
+      if (!updatedUser) {
+        console.log("[PATCH /api/profile] response", { status: 404, body: { error: "User not found." } });
+        res.status(404).json({ error: "User not found." });
+        return;
+      }
+
+      const body = { user: buildPublicUser({ ...updatedUser, email: authenticatedUser.email }) };
+      console.log("[PATCH /api/profile] response", { status: 200, body });
+      res.json(body);
+    } catch (error) {
+      console.error("[PATCH /api/profile] database error", error);
+      res.status(500).json({ error: "Could not update profile." });
+    }
+    return;
+  }
+
+  const userIndex = users.findIndex((user) => user.id === authenticatedUser.id);
   if (userIndex === -1) {
+    console.log("[PATCH /api/profile] response", { status: 404, body: { error: "User not found." } });
     res.status(404).json({ error: "User not found." });
     return;
   }
 
-  if (nextName) {
-    users[userIndex].name = nextName;
-  }
-
-  if (nextAvatar) {
-    users[userIndex].avatarUrl = nextAvatar;
-  }
-
+  users[userIndex].name = nextName;
   saveUsersToFile(users);
-  res.json({ user: buildPublicUser(users[userIndex]) });
+  const body = { user: buildPublicUser(users[userIndex]) };
+  console.log("[PATCH /api/profile] response", { status: 200, body });
+  res.json(body);
 });
 
-app.get("/api/plants", requireAuth, (_req, res) => {
-  const userPlants = plants.filter((plant) => String(plant.userId) === String(_req.user.id));
+app.get("/api/plants", async (req, res) => {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized." });
+    return;
+  }
+
+  if (hasDatabase()) {
+    const plantRows = await listPlantsByUser(Number(user.id));
+    res.json({ plants: plantRows.map((plant) => ({
+      id: plant.id,
+      userId: plant.userId,
+      name: plant.name,
+      sort: plant.plantType,
+      shouldBeWatered: plant.wateringText,
+      mood: plant.mood,
+      picture: plant.imageUrl
+    })) });
+    return;
+  }
+
+  const userPlants = plants.filter((plant) => String(plant.userId) === String(user.id));
   res.json({ plants: userPlants });
 });
 
-app.get("/api/all_plants", (req, res) => {
-  const user = getAuthenticatedUser(req);
+app.get("/api/all_plants", async (req, res) => {
+  const user = await getAuthenticatedUser(req);
   if (user) {
+    if (hasDatabase()) {
+      const plantRows = await listPlantsByUser(Number(user.id));
+      res.json({ plants: plantRows.map((plant) => ({
+        id: plant.id,
+        userId: plant.userId,
+        name: plant.name,
+        sort: plant.plantType,
+        shouldBeWatered: plant.wateringText,
+        mood: plant.mood,
+        picture: plant.imageUrl
+      })) });
+      return;
+    }
+
     const userPlants = plants.filter((plant) => String(plant.userId) === String(user.id));
     res.json({ plants: userPlants });
     return;
@@ -411,9 +502,36 @@ app.get("/api/all_plants", (req, res) => {
   res.json({ plants });
 });
 
-app.get("/api/id/:id", (req, res) => {
+app.get("/api/id/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const user = getAuthenticatedUser(req);
+  const user = await getAuthenticatedUser(req);
+
+  if (hasDatabase()) {
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized." });
+      return;
+    }
+
+    const plantRows = await listPlantsByUser(Number(user.id));
+    const targetPlant = plantRows.find((item) => item.id === id);
+
+    if (!targetPlant) {
+      res.status(404).json({ error: "Plant not found." });
+      return;
+    }
+
+    res.json({ plant: {
+      id: targetPlant.id,
+      userId: targetPlant.userId,
+      name: targetPlant.name,
+      sort: targetPlant.plantType,
+      shouldBeWatered: targetPlant.wateringText,
+      mood: targetPlant.mood,
+      picture: targetPlant.imageUrl
+    } });
+    return;
+  }
+
   const targetPlant = plants.find((item) => item.id === id && (!user || String(item.userId) === String(user.id) || item.userId === null));
 
   if (!targetPlant) {
@@ -424,7 +542,13 @@ app.get("/api/id/:id", (req, res) => {
   res.json({ plant: targetPlant });
 });
 
-app.post("/api/plants", requireAuth, plantCreationLimiter, (req, res) => {
+app.post("/api/plants", async (req, res) => {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized." });
+    return;
+  }
+
   const { name, sort, shouldBeWatered, mood, imageFileName, imageDataUrl } = req.body || {};
 
   const validatedName = validateTextField(name, FIELD_LIMITS.name);
@@ -436,6 +560,44 @@ app.post("/api/plants", requireAuth, plantCreationLimiter, (req, res) => {
   if (!validatedName || !validatedSort || !validatedShouldBeWatered || !validatedMood || !validatedImageFileName || !imageDataUrl) {
     res.status(400).json({ error: "Missing required fields." });
     return;
+  }
+
+  if (hasDatabase()) {
+    const parsedImage = parseDataUrl(imageDataUrl);
+    if (!parsedImage) {
+      res.status(400).json({ error: "Invalid image format. Use pasted png, jpeg or webp image." });
+      return;
+    }
+
+    const sanitizedBaseName = sanitizeFileBaseName(validatedImageFileName);
+    const fileName = uniqueImageFileName(sanitizedBaseName || "plant", parsedImage.extension);
+    const targetImagePath = path.join(plantImagesDir, fileName);
+
+    try {
+      fs.writeFileSync(targetImagePath, parsedImage.binary);
+      const createdPlant = await createPlantRecord({
+        userId: Number(user.id),
+        name: validatedName,
+        plantType: validatedSort,
+        wateringText: validatedShouldBeWatered,
+        mood: validatedMood,
+        imageUrl: `/uploads/plants/${fileName}`
+      });
+
+      res.status(201).json({ plant: {
+        id: createdPlant.id,
+        userId: createdPlant.userId,
+        name: createdPlant.name,
+        sort: createdPlant.plantType,
+        shouldBeWatered: createdPlant.wateringText,
+        mood: createdPlant.mood,
+        picture: createdPlant.imageUrl
+      } });
+      return;
+    } catch {
+      res.status(500).json({ error: "Failed to save plant." });
+      return;
+    }
   }
 
   const parsedImage = parseDataUrl(imageDataUrl);
@@ -463,7 +625,7 @@ app.post("/api/plants", requireAuth, plantCreationLimiter, (req, res) => {
       shouldBeWatered: validatedShouldBeWatered,
       mood: validatedMood,
       picture: `/uploads/plants/${fileName}`,
-      userId: req.user.id
+      userId: user.id
     });
 
     plants.push(createdPlant);
@@ -474,6 +636,128 @@ app.post("/api/plants", requireAuth, plantCreationLimiter, (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+app.post("/api/auth/signup", async (req, res) => {
+  const { name, email, password } = req.body || {};
+  const validatedName = validateTextField(name, FIELD_LIMITS.name, 2);
+  const validatedEmail = validateEmail(email);
+  const passwordText = typeof password === "string" ? password.trim() : "";
+
+  if (!validatedName || !validatedEmail || passwordText.length < 6 || passwordText.length > FIELD_LIMITS.password) {
+    res.status(400).json({ error: "Name, valid email and password (6+ chars) are required." });
+    return;
+  }
+
+  if (hasDatabase()) {
+    const existingUser = await findUserByEmail(validatedEmail);
+    if (existingUser) {
+      res.status(409).json({ error: "This email is already registered." });
+      return;
+    }
+
+    try {
+      const createdUser = await createUser({
+        email: validatedEmail,
+        passwordHash: await hashPassword(passwordText),
+        name: validatedName
+      });
+
+      const token = createToken({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name });
+      res.status(201).json({ token, user: buildPublicUser({ id: String(createdUser.id), email: createdUser.email, name: createdUser.name }) });
+      return;
+    } catch {
+      res.status(500).json({ error: "Could not create account." });
+      return;
+    }
+  }
+
+  if (users.some((user) => user.email === validatedEmail)) {
+    res.status(409).json({ error: "This email is already registered." });
+    return;
+  }
+
+  try {
+    const newUser = {
+      id: String(nextUserId(users)),
+      email: validatedEmail,
+      name: validatedName,
+      passwordHash: await hashPassword(passwordText)
+    };
+
+    users.push(newUser);
+    saveUsersToFile(users);
+
+    const token = createToken(newUser);
+    res.status(201).json({
+      token,
+      user: buildPublicUser(newUser)
+    });
+  } catch {
+    res.status(500).json({ error: "Could not create account." });
+  }
 });
+
+app.post("/api/auth/login", async (req, res) => {
+  const email = validateEmail(req.body?.email);
+  const passwordText = typeof req.body?.password === "string" ? req.body.password : "";
+
+  if (!email || !passwordText) {
+    res.status(400).json({ error: "Valid email and password are required." });
+    return;
+  }
+
+  if (hasDatabase()) {
+    const user = await findUserByEmail(email);
+    if (!user) {
+      res.status(401).json({ error: "Invalid email or password." });
+      return;
+    }
+
+    const matches = await verifyPassword(passwordText, user.password_hash);
+    if (!matches) {
+      res.status(401).json({ error: "Invalid email or password." });
+      return;
+    }
+
+    const token = createToken({ id: String(user.id), email: user.email, name: user.name });
+    res.json({ token, user: buildPublicUser({ id: String(user.id), email: user.email, name: user.name }) });
+    return;
+  }
+
+  const user = users.find((candidate) => candidate.email === email);
+  if (!user) {
+    res.status(401).json({ error: "Invalid email or password." });
+    return;
+  }
+
+  const matches = await verifyPassword(passwordText, user.passwordHash);
+  if (!matches) {
+    res.status(401).json({ error: "Invalid email or password." });
+    return;
+  }
+
+  const token = createToken(user);
+  res.json({
+    token,
+    user: buildPublicUser(user)
+  });
+});
+
+async function startServer() {
+  try {
+    const databaseInitialized = await initializeDatabase();
+    if (databaseInitialized) {
+      console.log("Connected to PostgreSQL database.");
+    } else {
+      console.warn("DATABASE_URL is not set; using local JSON storage.");
+    }
+
+    app.listen(port, () => {
+      console.log(`Server running on http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error(`Database initialization failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+startServer();
