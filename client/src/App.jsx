@@ -288,26 +288,38 @@ export default function App() {
         <div className="topbar__actions">
           <button type="button" className="secondary-button" onClick={handleAddNewPlantClick}>Add plant</button>
           <div className="topbar__profile-menu">
-            <button
-              type="button"
-              className="secondary-button topbar__profile-trigger"
-              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-              aria-label="Open profile menu"
-              aria-expanded={isProfileMenuOpen}
-            >
-              ⋯
-            </button>
+            {!isProfileMenuOpen ? (
+              <button
+                type="button"
+                className="secondary-button topbar__profile-trigger"
+                onClick={() => setIsProfileMenuOpen(true)}
+                aria-label="Open profile menu"
+                aria-expanded={isProfileMenuOpen}
+              >
+                ⋯
+              </button>
+            ) : null}
 
             {isProfileMenuOpen ? (
               <section className="topbar__profile-dropdown">
-                <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
-                <ProfilePanel user={user} onSave={handleProfileSave} loading={profileLoading} error={profileError} />
+                <button
+                  type="button"
+                  className="close-button"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                  aria-label="Close profile menu"
+                >
+                  X
+                </button>
 
                 <div className="profile-summary">
+                  <img id="profile-mascot" src="/plants/pink_pixel_plant.png" alt="Pixel flower mascot" />
                   <h2>Welcome back</h2>
                   <p>{user?.name}</p>
                   <p>{user?.email}</p>
+                  <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
                 </div>
+
+                <ProfilePanel user={user} onSave={handleProfileSave} loading={profileLoading} error={profileError} />
               </section>
             ) : null}
           </div>
