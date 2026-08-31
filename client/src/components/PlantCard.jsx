@@ -37,8 +37,8 @@ export default function PlantCard({ plant, onUpdate, onDelete }) {
 
       {menuOpen ? (
         <div className="plant-card__menu">
-          <button type="button" onClick={() => { setEditing(true); setMenuOpen(false); }}>Edit</button>
-          <button type="button" onClick={handleDelete}>Delete</button>
+          <button type="button" className="secondary-button" onClick={() => { setEditing(true); setMenuOpen(false); }}>Edit</button>
+          <button type="button" className="secondary-button" onClick={handleDelete}>Delete</button>
         </div>
       ) : null}
 

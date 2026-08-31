@@ -82,7 +82,7 @@ export default function EditPlantForm({ plant, onSave, onCancel }) {
       {form.picture ? <img className="paste-preview" src={form.picture} alt="Plant preview" /> : null}
 
       <div className="plant-card__edit-actions">
-        <button type="button" onClick={handleSubmit}>Save changes</button>
+        <button type="button" className="secondary-button"onClick={handleSubmit}>Save changes</button>
         <button type="button" className="secondary-button" onClick={onCancel}>Cancel</button>
       </div>
     </div>
