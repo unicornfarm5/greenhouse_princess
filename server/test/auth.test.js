@@ -1,7 +1,10 @@
+/* Name: Authentication tests
+  Responsibility: Verify token handling, public-user sanitization, and password security. */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPublicUser, createToken, verifyToken, hashPassword, verifyPassword } from './auth.js';
+import { buildPublicUser, createToken, verifyToken, hashPassword, verifyPassword } from '../auth.js';
 
 test('createToken + verifyToken round-trip works', () => {
   const token = createToken({ id: 'user-123', email: 'demo@example.com' });
@@ -11,13 +14,12 @@ test('createToken + verifyToken round-trip works', () => {
   assert.equal(payload.email, 'demo@example.com');
 });
 
-test('buildPublicUser removes sensitive properties and never exposes avatar data', () => {
+test('buildPublicUser removes sensitive properties and never exposes data', () => {
   const user = {
     id: 'user-123',
     email: 'demo@example.com',
     name: 'Demo user',
-    passwordHash: 'super-secret-hash',
-    avatarUrl: '/uploads/avatars/default-avatar.svg'
+    passwordHash: 'super-secret-hash'
   };
 
   const publicUser = buildPublicUser(user);

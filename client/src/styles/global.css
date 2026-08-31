@@ -1,3 +1,6 @@
+/* Name: Global application styles
+  Responsibility: Define the shared visual theme, layout, and component styling. */
+
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 :root {
@@ -84,7 +87,8 @@ body {
 }
 
 .auth-form input,
-.profile-form input {
+.profile-form input,
+.plant-card__edit-panel input {
   width: 100%;
   border: 3px solid var(--panel-border);
   background: #fff;
@@ -97,13 +101,15 @@ body {
 .auth-form button,
 .profile-form button,
 .secondary-button,
-.link-button {
+.link-button,
+.plant-card__menu-button {
   font-family: "Press Start 2P", monospace;
 }
 
 .auth-form button,
 .profile-form button,
-.secondary-button {
+.secondary-button,
+.plant-card__menu {
   border: 3px solid var(--panel-border);
   background: #ff69c7;
   color: #fff;
@@ -113,7 +119,8 @@ body {
   box-shadow: 3px 3px 0 var(--shadow);
 }
 
-.secondary-button {
+.secondary-button,
+.plant-card__menu-button {
   background: #fff;
   color: var(--text-main);
 }
@@ -289,6 +296,11 @@ body {
   cursor: not-allowed;
 }
 
+.plant-card__edit-panel {
+  display: grid;
+  gap: 0.8 rem;
+}
+
 .hero__kicker {
   margin: 0 0 1rem;
   color: var(--accent-2);
@@ -321,11 +333,23 @@ body {
   line-height: 1.9;
 }
 
+.hero-page-footer h2 {
+  font-size: 1rem;
+}
 .page-footer__image {
   display: block;
   width: min(160px, 70%);
   margin: 1rem auto 0;
   image-rendering: pixelated;
+}
+
+.hero-page-footer {
+  margin-top: 2.5rem;
+  padding: 2rem;
+  display: grid;
+  gap: 0.5rem;
+  place-items: center;
+  background-color: #fff3d9;
 }
 
 .state-message {
@@ -371,7 +395,32 @@ body {
 }
 
 .plant-card__header {
+  position: relative;
+  min-height: 2rem;
   margin-bottom: 0.8rem;
+}
+
+.plant-card__menu-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0.1rem 0.25rem;
+  cursor: pointer;
+}
+
+.plant-card__menu {
+  display: flex;
+  justify-content: space-around;
+}
+
+.plant-card__menu-button:hover,
+.plant-card__menu-button:focus-visible {
+  color: var(--accent-2);
 }
 
 .plant-card__header h2 {

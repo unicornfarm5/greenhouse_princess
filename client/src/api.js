@@ -1,3 +1,6 @@
+/* Name: Frontend API client
+  Responsibility: Send authenticated requests to the backend and normalize API responses. */
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
 
 function getToken() {
@@ -79,7 +82,7 @@ export async function fetchCurrentUser() {
 }
 
 export async function updateProfile(profile) {
-  const response = await fetch(`${API_BASE_URL}/profile`, {
+  const response = await fetch(`${API_BASE_URL}/auth/profile`, {
     method: "PATCH",
     headers: buildHeaders(),
     body: JSON.stringify(profile)
@@ -119,4 +122,33 @@ export async function createPlant(plantInput) {
   }
 
   return payload.plant;
+}
+
+export async function updatePlant(plantId, plantInput) {
+  const response = await fetch(`${API_BASE_URL}/plants/${plantId}`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    body: JSON.stringify(plantInput)
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not update plant.");
+  }
+
+  return payload.plant;
+}
+
+export async function deletePlant(plantId) {
+  const response = await fetch(`${API_BASE_URL}/plants/${plantId}`, {
+    method: "DELETE",
+    headers: buildHeaders()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not delete plant.");
+  }
+
+  return payload;
 }

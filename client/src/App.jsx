@@ -1,12 +1,17 @@
+/* Name: Greenhouse application
+  Responsibility: Coordinate authentication, profile state, plant state, and page-level flows. */
+
 import React, { useEffect, useMemo, useState } from "react";
 import {
   createPlant,
+  deletePlant,
   fetchCurrentUser,
   fetchPlants,
   isLoggedIn,
   login,
   logout,
   signup,
+  updatePlant,
   updateProfile
 } from "./api.js";
 import AddPlantPage from "./components/AddPlantPage.jsx";
@@ -220,6 +225,29 @@ export default function App() {
     }
   }
 
+  async function handlePlantUpdate(updatedPlant) {
+    try {
+      const nextPlant = await updatePlant(updatedPlant.id, {
+        shouldBeWatered: updatedPlant.shouldBeWatered,
+        mood: updatedPlant.mood,
+        imageDataUrl: updatedPlant.picture && updatedPlant.picture.startsWith("data:") ? updatedPlant.picture : undefined
+      });
+
+      setPlants((prev) => prev.map((plant) => (plant.id === nextPlant.id ? nextPlant : plant)));
+    } catch (submissionError) {
+      setError(submissionError.message || "Could not update plant.");
+    }
+  }
+
+  async function handlePlantDelete(plantId) {
+    try {
+      await deletePlant(plantId);
+      setPlants((prev) => prev.filter((plant) => plant.id !== plantId));
+    } catch (submissionError) {
+      setError(submissionError.message || "Could not delete plant.");
+    }
+  }
+
   function handleLogout() {
     logout();
     setUser(null);
@@ -276,7 +304,12 @@ export default function App() {
 
       <section className="plant-grid">
         {plants.map((plant) => (
-          <PlantCard key={plant.id} plant={plant} />
+          <PlantCard
+            key={plant.id}
+            plant={plant}
+            onUpdate={handlePlantUpdate}
+            onDelete={handlePlantDelete}
+          />
         ))}
       </section>
 
@@ -295,10 +328,10 @@ export default function App() {
         isTemporaryMode={false}
       />
 
-       <footer className="hero page-footer">
-        <h3 className="page-footer__text">Made with love 🌱✨</h3>
+       <footer className="hero-page-footer">
+        <h2 className="page-footer__text">Made with love 🌱✨</h2>
         <h3 className="page-footer__text">Thank you for visiting! 🌷✨</h3>
-        <h4 className="page-footer__text">Vibe coded by Linea</h4>
+        <h3 className="page-footer__text">Vibe coded by Linea</h3>
         <img className="page-footer__image" src={footerPlantImage} alt="Pixel flower mascot" />
       </footer>
 

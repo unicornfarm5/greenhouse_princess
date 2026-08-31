@@ -1,3 +1,6 @@
+/* Name: Add plant page
+  Responsibility: Render the new-plant form and collect pasted plant images. */
+
 import React from "react";
 
 export default function AddPlantPage({

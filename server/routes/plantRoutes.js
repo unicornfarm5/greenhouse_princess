@@ -1,0 +1,202 @@
+/* Name: Plant routes
+  Responsibility: Handle authenticated plant listing, creation, editing, and deletion. */
+
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import {
+  createPlant,
+  deletePlantById,
+  listAllPlants,
+  listPlantsByUser,
+  updatePlantById
+} from "../db.js";
+import { requireAuth } from "../middleware.js";
+import { FIELD_LIMITS, validateTextField } from "../validation.js";
+
+const router = Router();
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const plantCreationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+function validateImageMagicBytes(binary, extension) {
+  if (extension === "png") {
+    return binary.length >= 4 && binary[0] === 0x89 && binary[1] === 0x50 && binary[2] === 0x4e && binary[3] === 0x47;
+  }
+
+  if (extension === "jpg") {
+    return binary.length >= 3 && binary[0] === 0xff && binary[1] === 0xd8 && binary[2] === 0xff;
+  }
+
+  return binary.length >= 12 && binary[0] === 0x52 && binary[1] === 0x49 && binary[2] === 0x46 && binary[3] === 0x46
+    && binary[8] === 0x57 && binary[9] === 0x45 && binary[10] === 0x42 && binary[11] === 0x50;
+}
+
+function parseDataUrl(dataUrl) {
+  const match = /^data:(image\/(png|jpeg|webp));base64,(.+)$/i.exec(dataUrl || "");
+  if (!match) {
+    return null;
+  }
+
+  const mimeType = match[1].toLowerCase();
+  const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[mimeType];
+
+  try {
+    const binary = Buffer.from(match[3], "base64");
+    if (binary.length === 0 || binary.length > MAX_IMAGE_BYTES || !validateImageMagicBytes(binary, extension)) {
+      return null;
+    }
+    return { extension, binary, mimeType };
+  } catch {
+    return null;
+  }
+}
+
+function toPublicPlant(plant) {
+  return {
+    id: plant.id,
+    userId: plant.userId,
+    name: plant.name,
+    sort: plant.plantType,
+    shouldBeWatered: plant.wateringText,
+    mood: plant.mood,
+    picture: plant.imageData ? `data:${plant.imageMime};base64,${Buffer.from(plant.imageData).toString("base64")}` : null
+  };
+}
+
+router.use(requireAuth);
+
+router.get("/", async (req, res) => {
+  const plantRows = await listPlantsByUser(Number(req.user.id));
+  res.json({ plants: plantRows.map(toPublicPlant) });
+});
+
+router.get("/all", async (req, res) => {
+  const plantRows = await listAllPlants();
+  res.json({ plants: plantRows.map(toPublicPlant) });
+});
+
+router.get("/:id", async (req, res) => {
+  const plantId = Number(req.params.id);
+  if (!Number.isInteger(plantId)) {
+    res.status(400).json({ error: "Invalid plant id." });
+    return;
+  }
+
+  const plantRows = await listPlantsByUser(Number(req.user.id));
+  const plant = plantRows.find((item) => item.id === plantId);
+  if (!plant) {
+    res.status(404).json({ error: "Plant not found." });
+    return;
+  }
+
+  res.json({ plant: toPublicPlant(plant) });
+});
+
+router.post("/", plantCreationLimiter, async (req, res) => {
+  const { name, sort, shouldBeWatered, mood, imageDataUrl } = req.body || {};
+  const validatedName = validateTextField(name, FIELD_LIMITS.name);
+  const validatedSort = validateTextField(sort, FIELD_LIMITS.sort);
+  const validatedWatering = validateTextField(shouldBeWatered, FIELD_LIMITS.shouldBeWatered);
+  const validatedMood = validateTextField(mood, FIELD_LIMITS.mood);
+
+  if (!validatedName || !validatedSort || !validatedWatering || !validatedMood || !imageDataUrl) {
+    res.status(400).json({ error: "Missing required fields." });
+    return;
+  }
+
+  const parsedImage = parseDataUrl(imageDataUrl);
+  if (!parsedImage) {
+    res.status(400).json({ error: "Invalid image format. Use pasted png, jpeg or webp image." });
+    return;
+  }
+
+  try {
+    const plant = await createPlant({
+      userId: Number(req.user.id),
+      name: validatedName,
+      plantType: validatedSort,
+      wateringText: validatedWatering,
+      mood: validatedMood,
+      imageData: parsedImage.binary,
+      imageMime: parsedImage.mimeType,
+      imageName: `plant-${Date.now()}.${parsedImage.extension}`
+    });
+    res.status(201).json({ plant: toPublicPlant(plant) });
+  } catch {
+    res.status(500).json({ error: "Failed to save plant." });
+  }
+});
+
+router.patch("/:id", async (req, res) => {
+  const plantId = Number(req.params.id);
+  if (!Number.isInteger(plantId)) {
+    res.status(400).json({ error: "Invalid plant id." });
+    return;
+  }
+
+  const { shouldBeWatered, mood, imageDataUrl } = req.body || {};
+  const updateData = {};
+
+  if (shouldBeWatered !== undefined) {
+    updateData.wateringText = validateTextField(shouldBeWatered, FIELD_LIMITS.shouldBeWatered);
+    if (!updateData.wateringText) {
+      res.status(400).json({ error: "A valid water preference is required." });
+      return;
+    }
+  }
+
+  if (mood !== undefined) {
+    updateData.mood = validateTextField(mood, FIELD_LIMITS.mood);
+    if (!updateData.mood) {
+      res.status(400).json({ error: "A valid mood is required." });
+      return;
+    }
+  }
+
+  if (imageDataUrl !== undefined && imageDataUrl !== null && imageDataUrl !== "") {
+    const parsedImage = parseDataUrl(imageDataUrl);
+    if (!parsedImage) {
+      res.status(400).json({ error: "Invalid image format. Use pasted png, jpeg or webp image." });
+      return;
+    }
+    updateData.imageData = parsedImage.binary;
+    updateData.imageMime = parsedImage.mimeType;
+    updateData.imageName = `plant-${plantId}.${parsedImage.extension}`;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ error: "No changes provided." });
+    return;
+  }
+
+  const plant = await updatePlantById({ id: plantId, userId: Number(req.user.id), ...updateData });
+  if (!plant) {
+    res.status(404).json({ error: "Plant not found." });
+    return;
+  }
+
+  res.json({ plant: toPublicPlant(plant) });
+});
+
+router.delete("/:id", async (req, res) => {
+  const plantId = Number(req.params.id);
+  if (!Number.isInteger(plantId)) {
+    res.status(400).json({ error: "Invalid plant id." });
+    return;
+  }
+
+  const deleted = await deletePlantById(plantId, Number(req.user.id));
+  if (!deleted) {
+    res.status(404).json({ error: "Plant not found." });
+    return;
+  }
+
+  res.json({ success: true, id: plantId });
+});
+
+export default router;

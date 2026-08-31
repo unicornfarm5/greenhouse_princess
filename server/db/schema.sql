@@ -1,3 +1,6 @@
+-- Name: Greenhouse Princess database schema
+-- Responsibility: Define PostgreSQL tables and indexes for users and plants.
+
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
