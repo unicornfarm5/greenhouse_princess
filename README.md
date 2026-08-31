@@ -4,13 +4,12 @@ A small React + Express app for managing a personal plant garden with login, use
 
 ![Pixel plant mascot](client/public/plants/pixel_plant.png)
 
-## What this project uses
+## Tech stack
 
 - Frontend: React + Vite
 - Backend: Express + Node
 - Database: PostgreSQL via Supabase
 - Auth: JWT-based login/signup
-- No Docker
 - No local database server required for normal use
 
 ## Local setup
