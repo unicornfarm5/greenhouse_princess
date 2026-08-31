@@ -62,6 +62,7 @@ export default function App() {
   const [isLoadingPlants, setIsLoadingPlants] = useState(false);
   const [error, setError] = useState("");
   const [isAddPlantOpen, setIsAddPlantOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [newPlantInput, setNewPlantInput] = useState(EMPTY_NEW_PLANT);
   const [pastedImageDataUrl, setPastedImageDataUrl] = useState("");
   const [pasteStatus, setPasteStatus] = useState("");
@@ -252,6 +253,7 @@ export default function App() {
     logout();
     setUser(null);
     setPlants([]);
+    setIsProfileMenuOpen(false);
   }
 
   if (!loggedIn) {
@@ -285,19 +287,32 @@ export default function App() {
 
         <div className="topbar__actions">
           <button type="button" className="secondary-button" onClick={handleAddNewPlantClick}>Add plant</button>
-          <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
+          <div className="topbar__profile-menu">
+            <button
+              type="button"
+              className="secondary-button topbar__profile-trigger"
+              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+              aria-label="Open profile menu"
+              aria-expanded={isProfileMenuOpen}
+            >
+              ⋯
+            </button>
+
+            {isProfileMenuOpen ? (
+              <section className="topbar__profile-dropdown">
+                <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
+                <ProfilePanel user={user} onSave={handleProfileSave} loading={profileLoading} error={profileError} />
+
+                <div className="profile-summary">
+                  <h2>Welcome back</h2>
+                  <p>{user?.name}</p>
+                  <p>{user?.email}</p>
+                </div>
+              </section>
+            ) : null}
+          </div>
         </div>
       </header>
-
-      <section className="dashboard">
-        <ProfilePanel user={user} onSave={handleProfileSave} loading={profileLoading} error={profileError} />
-
-        <section className="profile-summary">
-          <h2>Welcome back</h2>
-          <p>{user?.name}</p>
-          <p>{user?.email}</p>
-        </section>
-      </section>
 
       {error ? <p className="state-message state-message--error">{error}</p> : null}
       {isLoadingPlants ? <p className="state-message">Loading plants...</p> : null}
