@@ -62,6 +62,7 @@ export default function App() {
   const [isLoadingPlants, setIsLoadingPlants] = useState(false);
   const [error, setError] = useState("");
   const [isAddPlantOpen, setIsAddPlantOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [newPlantInput, setNewPlantInput] = useState(EMPTY_NEW_PLANT);
   const [pastedImageDataUrl, setPastedImageDataUrl] = useState("");
   const [pasteStatus, setPasteStatus] = useState("");
@@ -252,6 +253,7 @@ export default function App() {
     logout();
     setUser(null);
     setPlants([]);
+    setIsProfileMenuOpen(false);
   }
 
   if (!loggedIn) {
@@ -285,19 +287,44 @@ export default function App() {
 
         <div className="topbar__actions">
           <button type="button" className="secondary-button" onClick={handleAddNewPlantClick}>Add plant</button>
-          <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
+          <div className="topbar__profile-menu">
+            {!isProfileMenuOpen ? (
+              <button
+                type="button"
+                className="secondary-button topbar__profile-trigger"
+                onClick={() => setIsProfileMenuOpen(true)}
+                aria-label="Open profile menu"
+                aria-expanded={isProfileMenuOpen}
+              >
+                ⋯
+              </button>
+            ) : null}
+
+            {isProfileMenuOpen ? (
+              <section className="topbar__profile-dropdown">
+                <button
+                  type="button"
+                  className="close-button"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                  aria-label="Close profile menu"
+                >
+                  X
+                </button>
+
+                <div className="profile-summary">
+                  <img id="profile-mascot" src="/plants/pink_pixel_plant.png" alt="Pixel flower mascot" />
+                  <h2>Welcome back</h2>
+                  <p>{user?.name}</p>
+                  <p>{user?.email}</p>
+                  <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
+                </div>
+
+                <ProfilePanel user={user} onSave={handleProfileSave} loading={profileLoading} error={profileError} />
+              </section>
+            ) : null}
+          </div>
         </div>
       </header>
-
-      <section className="dashboard">
-        <ProfilePanel user={user} onSave={handleProfileSave} loading={profileLoading} error={profileError} />
-
-        <section className="profile-summary">
-          <h2>Welcome back</h2>
-          <p>{user?.name}</p>
-          <p>{user?.email}</p>
-        </section>
-      </section>
 
       {error ? <p className="state-message state-message--error">{error}</p> : null}
       {isLoadingPlants ? <p className="state-message">Loading plants...</p> : null}
@@ -331,7 +358,7 @@ export default function App() {
        <footer className="hero-page-footer">
         <h2 className="page-footer__text">Made with love 🌱✨</h2>
         <h3 className="page-footer__text">Thank you for visiting! 🌷✨</h3>
-        <h3 className="page-footer__text">Vibe coded by Linea</h3>
+        <a href="https://lineamoltved.com" target="_blank" rel="noopener noreferrer">Visit my portfolio</a>
         <img className="page-footer__image" src={footerPlantImage} alt="Pixel flower mascot" />
       </footer>
 

@@ -1,12 +1,16 @@
 /* Name: Profile panel
   Responsibility: Display and submit the authenticated user's editable profile name. */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function ProfilePanel({ user, onSave, loading, error }) {
   const [form, setForm] = useState({
     name: user?.name || ""
   });
+
+  useEffect(() => {
+    setForm({ name: user?.name || "" });
+  }, [user?.name]);
 
   function handleChange(event) {
     const { name, value } = event.target;
