@@ -358,7 +358,7 @@ export default function App() {
        <footer className="hero-page-footer">
         <h2 className="page-footer__text">Made with love 🌱✨</h2>
         <h3 className="page-footer__text">Thank you for visiting! 🌷✨</h3>
-        <h3 className="page-footer__text">Vibe coded by Linea</h3>
+        <a href="https://lineamoltved.com" target="_blank" rel="noopener noreferrer">Visit my portfolio</a>
         <img className="page-footer__image" src={footerPlantImage} alt="Pixel flower mascot" />
       </footer>
 
