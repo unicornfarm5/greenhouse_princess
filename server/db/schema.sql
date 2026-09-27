@@ -24,9 +24,27 @@ CREATE TABLE IF NOT EXISTS plants (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS plant_updates (
+  id BIGSERIAL PRIMARY KEY,
+  plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+  pot_size_cm INTEGER CHECK (pot_size_cm IS NULL OR pot_size_cm > 0),
+  dirt_type_note VARCHAR(500),
+  health_check_note VARCHAR(1000),
+  other_note VARCHAR(1000),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT plant_updates_has_content CHECK (
+    pot_size_cm IS NOT NULL
+    OR dirt_type_note IS NOT NULL
+    OR health_check_note IS NOT NULL
+    OR other_note IS NOT NULL
+  )
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_plants_user_id ON plants(user_id);
 CREATE INDEX IF NOT EXISTS idx_plants_created_at ON plants(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_plant_updates_plant_id_created_at
+  ON plant_updates(plant_id, created_at DESC);
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

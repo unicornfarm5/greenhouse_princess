@@ -4,9 +4,11 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import {
+  createPlantUpdate,
   createPlant,
   deletePlantById,
   listAllPlants,
+  listPlantUpdatesByUser,
   listPlantsByUser,
   updatePlantById
 } from "../db.js";
@@ -15,6 +17,11 @@ import { FIELD_LIMITS, validateTextField } from "../validation.js";
 
 const router = Router();
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const UPDATE_FIELD_LIMITS = {
+  dirtTypeNote: 500,
+  healthCheckNote: 1000,
+  otherNote: 1000
+};
 
 const plantCreationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -85,6 +92,26 @@ router.get("/all", async (req, res) => {
   res.json({ plants: plantRows.map(toPublicPlant) });
 });
 
+router.get("/:id/updates", async (req, res) => {
+  const plantId = Number(req.params.id);
+  if (!Number.isInteger(plantId)) {
+    res.status(400).json({ error: "Invalid plant id." });
+    return;
+  }
+
+  const plantRows = await listPlantsByUser(Number(req.user.id));
+  if (!plantRows.some((plant) => plant.id === plantId)) {
+    res.status(404).json({ error: "Plant not found." });
+    return;
+  }
+
+  const updates = await listPlantUpdatesByUser({
+    plantId,
+    userId: Number(req.user.id)
+  });
+  res.json({ updates });
+});
+
 router.get("/:id", async (req, res) => {
   const plantId = Number(req.params.id);
   if (!Number.isInteger(plantId)) {
@@ -135,6 +162,55 @@ router.post("/", plantCreationLimiter, async (req, res) => {
   } catch {
     res.status(500).json({ error: "Failed to save plant." });
   }
+});
+
+router.post("/:id/updates", async (req, res) => {
+  const plantId = Number(req.params.id);
+  if (!Number.isInteger(plantId)) {
+    res.status(400).json({ error: "Invalid plant id." });
+    return;
+  }
+
+  const { potSizeCm, dirtTypeNote, healthCheckNote, otherNote } = req.body || {};
+  let validatedPotSize = null;
+
+  if (potSizeCm !== undefined && potSizeCm !== null && potSizeCm !== "") {
+    validatedPotSize = Number(potSizeCm);
+    if (!Number.isInteger(validatedPotSize) || validatedPotSize <= 0) {
+      res.status(400).json({ error: "Pot size must be a positive whole number of centimeters." });
+      return;
+    }
+  }
+
+  const validatedDirtType = dirtTypeNote ? validateTextField(dirtTypeNote, UPDATE_FIELD_LIMITS.dirtTypeNote) : null;
+  const validatedHealthCheck = healthCheckNote ? validateTextField(healthCheckNote, UPDATE_FIELD_LIMITS.healthCheckNote) : null;
+  const validatedOtherNote = otherNote ? validateTextField(otherNote, UPDATE_FIELD_LIMITS.otherNote) : null;
+
+  if ((dirtTypeNote && !validatedDirtType) || (healthCheckNote && !validatedHealthCheck) || (otherNote && !validatedOtherNote)) {
+    res.status(400).json({ error: "Update notes contain invalid text." });
+    return;
+  }
+
+  if (validatedPotSize === null && !validatedDirtType && !validatedHealthCheck && !validatedOtherNote) {
+    res.status(400).json({ error: "Add at least one plant update." });
+    return;
+  }
+
+  const update = await createPlantUpdate({
+    plantId,
+    userId: Number(req.user.id),
+    potSizeCm: validatedPotSize,
+    dirtTypeNote: validatedDirtType,
+    healthCheckNote: validatedHealthCheck,
+    otherNote: validatedOtherNote
+  });
+
+  if (!update) {
+    res.status(404).json({ error: "Plant not found." });
+    return;
+  }
+
+  res.status(201).json({ update });
 });
 
 router.patch("/:id", async (req, res) => {

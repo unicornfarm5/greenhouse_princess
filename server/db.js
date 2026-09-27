@@ -48,9 +48,29 @@ export async function initializeDatabase() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS plant_updates (
+      id BIGSERIAL PRIMARY KEY,
+      plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+      pot_size_cm INTEGER CHECK (pot_size_cm IS NULL OR pot_size_cm > 0),
+      dirt_type_note VARCHAR(500),
+      health_check_note VARCHAR(1000),
+      other_note VARCHAR(1000),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT plant_updates_has_content CHECK (
+        pot_size_cm IS NOT NULL
+        OR dirt_type_note IS NOT NULL
+        OR health_check_note IS NOT NULL
+        OR other_note IS NOT NULL
+      )
+    );
+  `);
+
+  await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_plants_user_id ON plants(user_id);
     CREATE INDEX IF NOT EXISTS idx_plants_created_at ON plants(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_plant_updates_plant_id_created_at
+      ON plant_updates(plant_id, created_at DESC);
   `);
 
   return true;
@@ -130,6 +150,47 @@ export async function createPlant({ userId, name, plantType, wateringText, mood,
   );
 
   return result.rows[0];
+}
+
+export async function createPlantUpdate({ plantId, userId, potSizeCm, dirtTypeNote, healthCheckNote, otherNote }) {
+  if (!pool) {
+    throw new Error("Database is not configured.");
+  }
+
+  const result = await pool.query(
+    `INSERT INTO plant_updates (plant_id, pot_size_cm, dirt_type_note, health_check_note, other_note)
+     SELECT $1, $3, $4, $5, $6
+     WHERE EXISTS (
+       SELECT 1
+       FROM plants
+       WHERE id = $1 AND user_id = $2
+     )
+     RETURNING id, plant_id AS "plantId", pot_size_cm AS "potSizeCm",
+       dirt_type_note AS "dirtTypeNote", health_check_note AS "healthCheckNote",
+       other_note AS "otherNote", created_at AS "createdAt"`,
+    [plantId, userId, potSizeCm || null, dirtTypeNote || null, healthCheckNote || null, otherNote || null]
+  );
+
+  return result.rows[0] || null;
+}
+
+export async function listPlantUpdatesByUser({ plantId, userId }) {
+  if (!pool) {
+    return [];
+  }
+
+  const result = await pool.query(
+    `SELECT updates.id, updates.plant_id AS "plantId", updates.pot_size_cm AS "potSizeCm",
+       updates.dirt_type_note AS "dirtTypeNote", updates.health_check_note AS "healthCheckNote",
+       updates.other_note AS "otherNote", updates.created_at AS "createdAt"
+     FROM plant_updates AS updates
+     INNER JOIN plants ON plants.id = updates.plant_id
+     WHERE updates.plant_id = $1 AND plants.user_id = $2
+     ORDER BY updates.created_at DESC, updates.id DESC`,
+    [plantId, userId]
+  );
+
+  return result.rows;
 }
 
 export async function updatePlantById({ id, userId, wateringText, mood, imageData, imageMime, imageName }) {

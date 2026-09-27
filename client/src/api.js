@@ -109,6 +109,47 @@ export async function fetchPlants() {
   return payload.plants;
 }
 
+export async function fetchPlant(plantId) {
+  const response = await fetch(`${API_BASE_URL}/plants/${plantId}`, {
+    headers: buildHeaders()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not load plant.");
+  }
+
+  return payload.plant;
+}
+
+export async function fetchPlantUpdates(plantId) {
+  const response = await fetch(`${API_BASE_URL}/plants/${plantId}/updates`, {
+    headers: buildHeaders()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not load plant updates.");
+  }
+
+  return payload.updates;
+}
+
+export async function createPlantUpdate(plantId, updateInput) {
+  const response = await fetch(`${API_BASE_URL}/plants/${plantId}/updates`, {
+    method: "POST",
+    headers: buildHeaders(),
+    body: JSON.stringify(updateInput)
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not save plant update.");
+  }
+
+  return payload.update;
+}
+
 export async function createPlant(plantInput) {
   const response = await fetch(`${API_BASE_URL}/plants`, {
     method: "POST",
