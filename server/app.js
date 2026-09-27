@@ -24,7 +24,7 @@ app.use(
     }
   })
 );
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "7mb", strict: true }));
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
@@ -32,6 +32,20 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/plants", plantRouter);
+
+app.use((error, _req, res, next) => {
+  if (error.type === "entity.too.large") {
+    res.status(413).json({ error: "Request is too large." });
+    return;
+  }
+
+  if (error instanceof SyntaxError && error.status === 400) {
+    res.status(400).json({ error: "Invalid JSON body." });
+    return;
+  }
+
+  next(error);
+});
 
 async function startServer() {
   try {

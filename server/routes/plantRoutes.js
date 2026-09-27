@@ -42,11 +42,16 @@ function parseDataUrl(dataUrl) {
     return null;
   }
 
+  const encodedData = match[3];
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedData)) {
+    return null;
+  }
+
   const mimeType = match[1].toLowerCase();
   const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[mimeType];
 
   try {
-    const binary = Buffer.from(match[3], "base64");
+    const binary = Buffer.from(encodedData, "base64");
     if (binary.length === 0 || binary.length > MAX_IMAGE_BYTES || !validateImageMagicBytes(binary, extension)) {
       return null;
     }
