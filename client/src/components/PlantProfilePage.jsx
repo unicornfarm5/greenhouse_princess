@@ -174,6 +174,7 @@ export default function PlantProfilePage({
             {updates.map((update) => (
               <article className="plant-update" key={update.id}>
                 <time dateTime={update.createdAt}>{formatUpdateDate(update.createdAt)}</time>
+                {update.picture ? <img className="plant-update__image" src={update.picture} alt="Plant update" /> : null}
                 {update.potSizeCm ? <p><strong>Pot size:</strong> {update.potSizeCm} cm</p> : null}
                 {update.dirtTypeNote ? <p><strong>Dirt type:</strong> {update.dirtTypeNote}</p> : null}
                 {update.healthCheckNote ? <p><strong>Health check:</strong> {update.healthCheckNote}</p> : null}

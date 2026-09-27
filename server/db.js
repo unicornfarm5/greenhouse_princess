@@ -55,14 +55,35 @@ export async function initializeDatabase() {
       dirt_type_note VARCHAR(500),
       health_check_note VARCHAR(1000),
       other_note VARCHAR(1000),
+      image_data BYTEA,
+      image_mime VARCHAR(50),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       CONSTRAINT plant_updates_has_content CHECK (
         pot_size_cm IS NOT NULL
         OR dirt_type_note IS NOT NULL
         OR health_check_note IS NOT NULL
         OR other_note IS NOT NULL
+        OR image_data IS NOT NULL
       )
     );
+  `);
+
+  await pool.query(`
+    ALTER TABLE plant_updates
+      ADD COLUMN IF NOT EXISTS image_data BYTEA,
+      ADD COLUMN IF NOT EXISTS image_mime VARCHAR(50);
+  `);
+
+  await pool.query(`
+    ALTER TABLE plant_updates
+      DROP CONSTRAINT IF EXISTS plant_updates_has_content,
+      ADD CONSTRAINT plant_updates_has_content CHECK (
+        pot_size_cm IS NOT NULL
+        OR dirt_type_note IS NOT NULL
+        OR health_check_note IS NOT NULL
+        OR other_note IS NOT NULL
+        OR image_data IS NOT NULL
+      );
   `);
 
   await pool.query(`
@@ -152,14 +173,14 @@ export async function createPlant({ userId, name, plantType, wateringText, mood,
   return result.rows[0];
 }
 
-export async function createPlantUpdate({ plantId, userId, potSizeCm, dirtTypeNote, healthCheckNote, otherNote }) {
+export async function createPlantUpdate({ plantId, userId, potSizeCm, dirtTypeNote, healthCheckNote, otherNote, imageData, imageMime }) {
   if (!pool) {
     throw new Error("Database is not configured.");
   }
 
   const result = await pool.query(
-    `INSERT INTO plant_updates (plant_id, pot_size_cm, dirt_type_note, health_check_note, other_note)
-     SELECT $1, $3, $4, $5, $6
+    `INSERT INTO plant_updates (plant_id, pot_size_cm, dirt_type_note, health_check_note, other_note, image_data, image_mime)
+     SELECT $1, $3, $4, $5, $6, $7, $8
      WHERE EXISTS (
        SELECT 1
        FROM plants
@@ -167,8 +188,9 @@ export async function createPlantUpdate({ plantId, userId, potSizeCm, dirtTypeNo
      )
      RETURNING id, plant_id AS "plantId", pot_size_cm AS "potSizeCm",
        dirt_type_note AS "dirtTypeNote", health_check_note AS "healthCheckNote",
-       other_note AS "otherNote", created_at AS "createdAt"`,
-    [plantId, userId, potSizeCm || null, dirtTypeNote || null, healthCheckNote || null, otherNote || null]
+       other_note AS "otherNote", image_data AS "imageData", image_mime AS "imageMime",
+       created_at AS "createdAt"`,
+     [plantId, userId, potSizeCm || null, dirtTypeNote || null, healthCheckNote || null, otherNote || null, imageData || null, imageMime || null]
   );
 
   return result.rows[0] || null;
@@ -180,9 +202,10 @@ export async function listPlantUpdatesByUser({ plantId, userId }) {
   }
 
   const result = await pool.query(
-    `SELECT updates.id, updates.plant_id AS "plantId", updates.pot_size_cm AS "potSizeCm",
+     `SELECT updates.id, updates.plant_id AS "plantId", updates.pot_size_cm AS "potSizeCm",
        updates.dirt_type_note AS "dirtTypeNote", updates.health_check_note AS "healthCheckNote",
-       updates.other_note AS "otherNote", updates.created_at AS "createdAt"
+       updates.other_note AS "otherNote", updates.image_data AS "imageData",
+       updates.image_mime AS "imageMime", updates.created_at AS "createdAt"
      FROM plant_updates AS updates
      INNER JOIN plants ON plants.id = updates.plant_id
      WHERE updates.plant_id = $1 AND plants.user_id = $2

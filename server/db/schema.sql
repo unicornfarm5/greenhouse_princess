@@ -31,12 +31,15 @@ CREATE TABLE IF NOT EXISTS plant_updates (
   dirt_type_note VARCHAR(500),
   health_check_note VARCHAR(1000),
   other_note VARCHAR(1000),
+  image_data BYTEA,
+  image_mime VARCHAR(50),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT plant_updates_has_content CHECK (
     pot_size_cm IS NOT NULL
     OR dirt_type_note IS NOT NULL
     OR health_check_note IS NOT NULL
     OR other_note IS NOT NULL
+    OR image_data IS NOT NULL
   )
 );
 

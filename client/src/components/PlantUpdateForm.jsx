@@ -10,15 +10,73 @@ const EMPTY_FORM = {
   otherNote: ""
 };
 
+function readImageFile(file, onRead, onError) {
+  if (!file || !file.type.startsWith("image/")) {
+    onError("Choose an image file.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === "string") {
+      onRead(reader.result);
+    } else {
+      onError("Could not read image.");
+    }
+  };
+  reader.onerror = () => onError("Could not read image.");
+  reader.readAsDataURL(file);
+}
+
 export default function PlantUpdateForm({ onSubmit, onCancel }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState("");
+  const [imageStatus, setImageStatus] = useState("");
 
   function handleChange(event) {
     const { name, value } = event.target;
     setError("");
     setForm((previous) => ({ ...previous, [name]: value }));
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    readImageFile(
+      file,
+      (nextImage) => {
+        setImageDataUrl(nextImage);
+        setImageStatus("Photo ready to save.");
+        setError("");
+      },
+      setError
+    );
+  }
+
+  function handlePaste(event) {
+    const imageItem = Array.from(event.clipboardData?.items || [])
+      .find((item) => item.type.startsWith("image/"));
+    const file = imageItem?.getAsFile();
+
+    if (!file) {
+      setError("Clipboard does not contain an image.");
+      return;
+    }
+
+    readImageFile(
+      file,
+      (nextImage) => {
+        setImageDataUrl(nextImage);
+        setImageStatus("Pasted image ready to save.");
+        setError("");
+      },
+      setError
+    );
   }
 
   async function handleSubmit(event) {
@@ -31,7 +89,7 @@ export default function PlantUpdateForm({ onSubmit, onCancel }) {
       otherNote: form.otherNote.trim()
     };
 
-    if (!Object.values(trimmedValues).some(Boolean)) {
+    if (!Object.values(trimmedValues).some(Boolean) && !imageDataUrl) {
       setError("Add at least one note to save an update.");
       return;
     }
@@ -49,9 +107,12 @@ export default function PlantUpdateForm({ onSubmit, onCancel }) {
         potSizeCm: trimmedValues.potSizeCm ? Number(trimmedValues.potSizeCm) : null,
         dirtTypeNote: trimmedValues.dirtTypeNote,
         healthCheckNote: trimmedValues.healthCheckNote,
-        otherNote: trimmedValues.otherNote
+        otherNote: trimmedValues.otherNote,
+        imageDataUrl: imageDataUrl || undefined
       });
       setForm(EMPTY_FORM);
+      setImageDataUrl("");
+      setImageStatus("");
     } catch (submissionError) {
       setError(submissionError.message || "Could not save plant update.");
     } finally {
@@ -80,6 +141,17 @@ export default function PlantUpdateForm({ onSubmit, onCancel }) {
         Other note
         <textarea name="otherNote" value={form.otherNote} onChange={handleChange} maxLength={1000} rows="3" />
       </label>
+
+      <label>
+        Update picture
+        <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} />
+      </label>
+
+      <div className="plant-update-form__paste" onPaste={handlePaste} tabIndex={0} role="button" aria-label="Paste an update image here">
+        Click here and press Ctrl+V to paste an image
+      </div>
+      {imageStatus ? <p className="paste-status">{imageStatus}</p> : null}
+      {imageDataUrl ? <img className="plant-update-form__preview" src={imageDataUrl} alt="Update preview" /> : null}
 
       {error ? <p className="state-message state-message--error">{error}</p> : null}
 

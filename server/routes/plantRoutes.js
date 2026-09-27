@@ -80,6 +80,21 @@ function toPublicPlant(plant) {
   };
 }
 
+function toPublicPlantUpdate(update) {
+  return {
+    id: update.id,
+    plantId: update.plantId,
+    potSizeCm: update.potSizeCm,
+    dirtTypeNote: update.dirtTypeNote,
+    healthCheckNote: update.healthCheckNote,
+    otherNote: update.otherNote,
+    picture: update.imageData
+      ? `data:${update.imageMime};base64,${Buffer.from(update.imageData).toString("base64")}`
+      : null,
+    createdAt: update.createdAt
+  };
+}
+
 router.use(requireAuth);
 
 router.get("/", async (req, res) => {
@@ -109,7 +124,7 @@ router.get("/:id/updates", async (req, res) => {
     plantId,
     userId: Number(req.user.id)
   });
-  res.json({ updates });
+  res.json({ updates: updates.map(toPublicPlantUpdate) });
 });
 
 router.get("/:id", async (req, res) => {
@@ -171,7 +186,7 @@ router.post("/:id/updates", async (req, res) => {
     return;
   }
 
-  const { potSizeCm, dirtTypeNote, healthCheckNote, otherNote } = req.body || {};
+  const { potSizeCm, dirtTypeNote, healthCheckNote, otherNote, imageDataUrl } = req.body || {};
   let validatedPotSize = null;
 
   if (potSizeCm !== undefined && potSizeCm !== null && potSizeCm !== "") {
@@ -192,6 +207,22 @@ router.post("/:id/updates", async (req, res) => {
   }
 
   if (validatedPotSize === null && !validatedDirtType && !validatedHealthCheck && !validatedOtherNote) {
+    if (!imageDataUrl) {
+      res.status(400).json({ error: "Add at least one plant update." });
+      return;
+    }
+  }
+
+  let parsedImage = null;
+  if (imageDataUrl) {
+    parsedImage = parseDataUrl(imageDataUrl);
+    if (!parsedImage) {
+      res.status(400).json({ error: "Invalid image format. Use png, jpeg or webp image." });
+      return;
+    }
+  }
+
+  if (validatedPotSize === null && !validatedDirtType && !validatedHealthCheck && !validatedOtherNote && !parsedImage) {
     res.status(400).json({ error: "Add at least one plant update." });
     return;
   }
@@ -202,7 +233,9 @@ router.post("/:id/updates", async (req, res) => {
     potSizeCm: validatedPotSize,
     dirtTypeNote: validatedDirtType,
     healthCheckNote: validatedHealthCheck,
-    otherNote: validatedOtherNote
+    otherNote: validatedOtherNote,
+    imageData: parsedImage?.binary,
+    imageMime: parsedImage?.mimeType
   });
 
   if (!update) {
@@ -210,7 +243,7 @@ router.post("/:id/updates", async (req, res) => {
     return;
   }
 
-  res.status(201).json({ update });
+  res.status(201).json({ update: toPublicPlantUpdate(update) });
 });
 
 router.patch("/:id", async (req, res) => {

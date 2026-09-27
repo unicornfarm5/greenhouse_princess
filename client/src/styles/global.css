@@ -617,6 +617,29 @@ label,
   resize: vertical;
 }
 
+.plant-update-form__paste {
+  border: 3px dashed var(--panel-border);
+  background: #fff;
+  padding: 0.75rem;
+  font-size: 0.7rem;
+  cursor: text;
+}
+
+.plant-update-form__paste:focus {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+.plant-update-form__preview {
+  display: block;
+  width: min(260px, 100%);
+  max-height: 260px;
+  object-fit: contain;
+  border: 3px solid var(--panel-border);
+  background: #fff;
+  padding: 0.25rem;
+}
+
 .plant-update-form__actions {
   display: flex;
   gap: 0.7rem;
@@ -661,6 +684,17 @@ label,
   color: var(--accent-2);
   font-family: var(--font-display);
   font-size: 0.5rem;
+}
+
+.plant-update__image {
+  display: block;
+  width: min(420px, 100%);
+  max-height: 360px;
+  object-fit: contain;
+  margin-bottom: 0.75rem;
+  border: 3px solid var(--panel-border);
+  background: #fff;
+  padding: 0.25rem;
 }
 
 .plant-update p {
