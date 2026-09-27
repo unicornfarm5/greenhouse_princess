@@ -448,11 +448,12 @@ label,
 
 .hero-page-footer {
   margin-top: 2.5rem;
-  padding: 2rem;
+  padding-top: 0.5rem;
   display: grid;
   gap: 0.5rem;
   place-items: center;
-  background-color: #fff3d9;
+  background-color: #FEC5E5;
+  border: 2px solid var(--panel-border);
 }
 
 .state-message {
