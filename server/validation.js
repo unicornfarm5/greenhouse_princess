@@ -10,13 +10,19 @@ export const FIELD_LIMITS = {
   password: 128
 };
 
+const UNSAFE_TEXT_PATTERN = /[<>\u0000-\u001f\u007f]/;
+
 export function validateTextField(value, maxLength, minLength = 1) {
   if (typeof value !== "string") {
     return null;
   }
 
   const trimmed = value.trim();
-  return trimmed.length >= minLength && trimmed.length <= maxLength ? trimmed : null;
+  if (trimmed.length < minLength || trimmed.length > maxLength || UNSAFE_TEXT_PATTERN.test(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
 }
 
 export function validateEmail(value) {

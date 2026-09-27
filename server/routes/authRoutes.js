@@ -2,6 +2,7 @@
   Responsibility: Handle signup, login, current-user, and profile API requests. */
 
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import {
   createUser,
   findUserByEmail,
@@ -13,8 +14,14 @@ import { getAuthenticatedUser, requireAuth } from "../middleware.js";
 import { FIELD_LIMITS, validateEmail, validateTextField } from "../validation.js";
 
 const router = Router();
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
-router.post("/signup", async (req, res) => {
+router.post("/signup", authLimiter, async (req, res) => {
   const { name, email, password } = req.body || {};
   const validatedName = validateTextField(name, FIELD_LIMITS.name, 2);
   const validatedEmail = validateEmail(email);
@@ -53,7 +60,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   const email = validateEmail(req.body?.email);
   const passwordText = typeof req.body?.password === "string" ? req.body.password : "";
 

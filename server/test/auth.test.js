@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildPublicUser, createToken, verifyToken, hashPassword, verifyPassword } from '../auth.js';
+import { validateTextField } from '../validation.js';
 
 test('createToken + verifyToken round-trip works', () => {
   const token = createToken({ id: 'user-123', email: 'demo@example.com' });
@@ -38,4 +39,10 @@ test('password hashing and verification works', async () => {
 
   assert.equal(isValid, true);
   assert.equal(isInvalid, false);
+});
+
+test('text validation rejects markup and control characters', () => {
+  assert.equal(validateTextField('<script>alert(1)</script>', 80), null);
+  assert.equal(validateTextField('safe plant name', 80), 'safe plant name');
+  assert.equal(validateTextField('name\u0000', 80), null);
 });
